@@ -513,6 +513,43 @@ body {
 }
 @keyframes slideInRight { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+/* ── DRUM ROLL PICKER ── */
+.drum-picker-wrap {
+  position: relative; display: flex; align-items: center; justify-content: center;
+  gap: 0; height: 150px; overflow: hidden;
+  background: var(--glass); border: 1px solid var(--border); border-radius: 14px;
+  user-select: none;
+}
+.drum-picker-highlight {
+  position: absolute; top: 50%; left: 0; right: 0;
+  height: 42px; transform: translateY(-50%);
+  background: rgba(6,182,212,.10);
+  border-top: 1px solid var(--cyan); border-bottom: 1px solid var(--cyan);
+  border-radius: 4px; pointer-events: none; z-index: 2;
+}
+.drum-col {
+  flex: 1; height: 100%; overflow-y: scroll; scroll-snap-type: y mandatory;
+  scrollbar-width: none; -ms-overflow-style: none;
+  display: flex; flex-direction: column; align-items: center;
+  padding: 54px 0; box-sizing: border-box;
+}
+.drum-col::-webkit-scrollbar { display: none; }
+.drum-item {
+  flex-shrink: 0; height: 42px; min-height: 42px; width: 100%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 22px; font-weight: 700; font-family: 'SF Mono', 'Fira Code', monospace;
+  color: var(--text-dim); scroll-snap-align: center; cursor: pointer;
+  transition: color .15s, transform .15s;
+}
+.drum-item.selected {
+  color: var(--cyan); transform: scale(1.15);
+}
+.drum-sep {
+  font-size: 26px; font-weight: 900; color: var(--cyan);
+  padding: 0 2px; flex-shrink: 0; align-self: center; z-index: 3;
+  text-shadow: 0 0 10px var(--cyan);
+}
 </style>
 </head>
 <body>
@@ -707,8 +744,19 @@ body {
         </div>
       </div>
       <div class="form-group">
-        <label>Time (HH:MM)</label>
-        <input type="time" id="schTime" value="06:00">
+        <label>⏱ Select Time</label>
+        <!-- iOS-style drum-roll time picker -->
+        <div class="drum-picker-wrap">
+          <div class="drum-picker-highlight"></div>
+          <div class="drum-col" id="drumHour"></div>
+          <div class="drum-sep">:</div>
+          <div class="drum-col" id="drumMin"></div>
+        </div>
+        <div style="text-align:center;font-size:11px;color:var(--text-dim);margin-top:6px;">
+          Selected: <span id="drumTimeDisplay" style="color:var(--cyan);font-weight:700;">06:00</span>
+        </div>
+        <!-- Hidden field for compatibility -->
+        <input type="hidden" id="schTime" value="06:00">
       </div>
     </div>
     <div class="modal-foot">
@@ -747,6 +795,31 @@ body {
         <label>Password (Optional)</label>
         <input type="password" id="cfgPass" placeholder="leave blank if none">
       </div>
+
+      <hr style="border:none;border-top:1px solid var(--border);margin:14px 0 10px;">
+      <div style="font-size:12px;font-weight:700;color:var(--cyan);letter-spacing:.5px;margin-bottom:10px;">🤖 TELEGRAM BOT</div>
+      <div class="form-group">
+        <label>Bot API Token</label>
+        <div style="display:flex;gap:6px;align-items:center;">
+          <input type="password" id="cfgBotToken" placeholder="1234567890:AAH…your-token"
+            style="flex:1;" autocomplete="off">
+          <button onclick="toggleTokenVis()" style="background:var(--glass);border:1px solid var(--border);
+            border-radius:8px;padding:6px 10px;cursor:pointer;font-size:14px;color:var(--text-muted);"
+            id="tokenEyeBtn" title="Show/hide token">👁</button>
+        </div>
+        <small style="font-size:10px;color:var(--text-dim);">Get your token from @BotFather on Telegram.</small>
+      </div>
+      <div class="form-group">
+        <label>Authorized Chat IDs <span style="font-size:10px;color:var(--text-dim)">(one per line)</span></label>
+        <textarea id="cfgChatIds" rows="3" placeholder="Enter Chat IDs, one per line&#10;e.g. 123456789"
+          style="width:100%;background:var(--glass);border:1px solid var(--border);border-radius:8px;
+          color:#e0e0e0;padding:9px 12px;font-size:13px;resize:vertical;outline:none;
+          font-family:inherit;box-sizing:border-box;"></textarea>
+        <small style="font-size:10px;color:var(--text-dim);">Get your chat ID from @userinfobot on Telegram.</small>
+      </div>
+      <button onclick="testTelegramToken()" style="width:100%;background:rgba(6,182,212,.12);border:1px solid var(--cyan);
+        border-radius:8px;padding:8px;color:var(--cyan);font-size:12px;font-weight:700;cursor:pointer;
+        letter-spacing:.5px;margin-top:2px;margin-bottom:4px;">📡 SEND TEST MESSAGE</button>
     </div>
     <div class="modal-foot">
       <button class="modal-btn secondary" onclick="closeSettingsModal()">CANCEL</button>
@@ -1200,9 +1273,82 @@ function populateScheduleSelect() {
   });
 }
 
+/* ── DRUM-ROLL TIME PICKER ── */
+let drumReady = false;
+function initDrumPicker(h = 6, m = 0) {
+  const hourCol = document.getElementById("drumHour");
+  const minCol  = document.getElementById("drumMin");
+  hourCol.innerHTML = "";
+  minCol.innerHTML  = "";
+  for (let i = 0; i < 24; i++) {
+    const el = document.createElement("div");
+    el.className = "drum-item";
+    el.textContent = String(i).padStart(2, "0");
+    el.dataset.val = i;
+    hourCol.appendChild(el);
+  }
+  for (let i = 0; i < 60; i++) {
+    const el = document.createElement("div");
+    el.className = "drum-item";
+    el.textContent = String(i).padStart(2, "0");
+    el.dataset.val = i;
+    minCol.appendChild(el);
+  }
+  // Scroll to initial values (no animation on init)
+  hourCol.scrollTop = h * 42;
+  minCol.scrollTop  = m * 42;
+  updateDrumDisplay();
+
+  function onScroll(col, isHour) {
+    clearTimeout(col._snapTimer);
+    col._snapTimer = setTimeout(() => {
+      const idx = Math.round(col.scrollTop / 42);
+      col.scrollTop = idx * 42;
+      updateDrumDisplay();
+    }, 120);
+  }
+
+  hourCol.addEventListener("scroll", () => onScroll(hourCol, true));
+  minCol.addEventListener("scroll",  () => onScroll(minCol, false));
+
+  // Click on item scrolls it to center
+  hourCol.addEventListener("click", e => {
+    if (e.target.classList.contains("drum-item")) {
+      const v = parseInt(e.target.dataset.val);
+      hourCol.scrollTo({ top: v * 42, behavior: "smooth" });
+    }
+  });
+  minCol.addEventListener("click", e => {
+    if (e.target.classList.contains("drum-item")) {
+      const v = parseInt(e.target.dataset.val);
+      minCol.scrollTo({ top: v * 42, behavior: "smooth" });
+    }
+  });
+
+  drumReady = true;
+}
+
+function updateDrumDisplay() {
+  const hourCol = document.getElementById("drumHour");
+  const minCol  = document.getElementById("drumMin");
+  const h = Math.round(hourCol.scrollTop / 42);
+  const m = Math.round(minCol.scrollTop  / 42);
+  const hh = Math.min(23, Math.max(0, h));
+  const mm = Math.min(59, Math.max(0, m));
+  const timeStr = `${String(hh).padStart(2,"0")}:${String(mm).padStart(2,"0")}`;
+  document.getElementById("schTime").value = timeStr;
+  document.getElementById("drumTimeDisplay").textContent = timeStr;
+  // Highlight selected items
+  hourCol.querySelectorAll(".drum-item").forEach((el, i) => el.classList.toggle("selected", i === hh));
+  minCol .querySelectorAll(".drum-item").forEach((el, i) => el.classList.toggle("selected", i === mm));
+}
+
 function openScheduleModal() {
   renderScheduleList();
   document.getElementById("schModal").classList.add("open");
+  if (!drumReady) {
+    setTimeout(() => initDrumPicker(6, 0), 60);
+  }
 }
 function closeScheduleModal() {
   document.getElementById("schModal").classList.remove("open");
@@ -1234,9 +1380,11 @@ function submitSchedule() {
   const rel = parseInt(document.getElementById("schAppliance").value);
   const day = document.getElementById("schDay").value;
   const act = document.getElementById("schAction").value;
+  // Update display before reading (in case user hasn't scrolled recently)
+  updateDrumDisplay();
   const tim = document.getElementById("schTime").value;
 
-  if (!tim) { toast("Enter a valid time", "⚠"); return; }
+  if (!tim) { toast("Select a valid time", "⚠"); return; }
 
   const newSch = { relay: rel, day: day, time: tim, action: act };
   schedules.push(newSch);
@@ -1259,9 +1407,32 @@ document.getElementById("openSettingsBtn").addEventListener("click", () => {
   document.getElementById("cfgPrefix").value = config.prefix;
   document.getElementById("cfgUser").value = config.user;
   document.getElementById("cfgPass").value = config.pass;
+  // Telegram fields
+  document.getElementById("cfgBotToken").value = localStorage.getItem("mh_bot_token") || "";
+  const ids = [];
+  for (let i = 0; i < 10; i++) {
+    const v = localStorage.getItem(`mh_chat_${i}`);
+    if (v) ids.push(v);
+  }
+  document.getElementById("cfgChatIds").value = ids.join("\n");
   document.getElementById("settingsModal").classList.add("open");
 });
 function closeSettingsModal() { document.getElementById("settingsModal").classList.remove("open"); }
+
+function toggleTokenVis() {
+  const inp = document.getElementById("cfgBotToken");
+  const btn = document.getElementById("tokenEyeBtn");
+  if (inp.type === "password") { inp.type = "text"; btn.textContent = "🙈"; }
+  else { inp.type = "password"; btn.textContent = "👁"; }
+}
+
+function testTelegramToken() {
+  const tok = document.getElementById("cfgBotToken").value.trim();
+  if (tok.length < 10) { toast("Enter a valid bot token first", "⚠"); return; }
+  mqttPublish(`${config.prefix}/admin/tg-token`, tok);
+  setTimeout(() => mqttPublish(`${config.prefix}/admin/tg-test`, "ping"), 400);
+  toast("Test message sent via MQTT — check Telegram!", "📡");
+}
 
 function saveSettings() {
   config.broker = document.getElementById("cfgBroker").value.trim() || "broker.emqx.io";
@@ -1276,9 +1447,28 @@ function saveSettings() {
   localStorage.setItem("mh_user", config.user);
   localStorage.setItem("mh_pass", config.pass);
 
+  // Save & publish Telegram bot token
+  const tok = document.getElementById("cfgBotToken").value.trim();
+  if (tok.length >= 10) {
+    localStorage.setItem("mh_bot_token", tok);
+    mqttPublish(`${config.prefix}/admin/tg-token`, tok);
+  }
+
+  // Save & publish chat IDs (one per line)
+  const rawIds = document.getElementById("cfgChatIds").value
+    .split("\n").map(s => s.trim()).filter(s => s.length > 0);
+  for (let i = 0; i < 10; i++) {
+    if (i < rawIds.length) {
+      localStorage.setItem(`mh_chat_${i}`, rawIds[i]);
+      mqttPublish(`${config.prefix}/admin/adduser`, rawIds[i]);
+    } else {
+      localStorage.removeItem(`mh_chat_${i}`);
+    }
+  }
+
   closeSettingsModal();
   connectMQTT();
-  toast("Settings saved, reconnecting…", "⚙");
+  toast(`Settings saved${tok.length >= 10 ? " + Telegram config sent" : ""}`, "⚙");
 }
 
 /* ── PUMP LIMITS MODAL ── */
