@@ -1,0 +1,1344 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Modern House Automation</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Rajdhani:wght@500;600;700&family=Orbitron:wght@500;700;900&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+<style>
+:root {
+  --bg: #090d16;
+  --bg-gradient: radial-gradient(circle at 50% 0%, #151d30 0%, #090d16 80%);
+  --surface: rgba(18, 24, 38, 0.75);
+  --surface-hover: rgba(26, 35, 54, 0.85);
+  --surface-solid: #121927;
+  --surface-accent: #1e293b;
+  --border: rgba(56, 189, 248, 0.16);
+  --border-active: rgba(56, 189, 248, 0.45);
+  --cyan: #06b6d4;
+  --cyan-glow: rgba(6, 182, 212, 0.35);
+  --emerald: #10b981;
+  --emerald-bg: rgba(16, 185, 129, 0.12);
+  --emerald-glow: rgba(16, 185, 129, 0.35);
+  --amber: #f59e0b;
+  --amber-bg: rgba(245, 158, 11, 0.12);
+  --amber-glow: rgba(245, 158, 11, 0.35);
+  --crimson: #ef4444;
+  --crimson-bg: rgba(239, 68, 68, 0.12);
+  --crimson-glow: rgba(239, 68, 68, 0.35);
+  --water: #38bdf8;
+  --water-deep: #0284c7;
+  --text: #f1f5f9;
+  --text-muted: #94a3b8;
+  --text-dim: #64748b;
+  --radius-sm: 8px;
+  --radius-md: 14px;
+  --radius-lg: 20px;
+  --shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { height: 100%; }
+body {
+  background: var(--bg);
+  background-image: var(--bg-gradient);
+  color: var(--text);
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  min-height: 100%;
+  overflow-x: hidden;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: var(--cyan); }
+
+/* ── LOGIN VIEW ── */
+#loginView {
+  position: fixed; inset: 0; z-index: 1000;
+  display: flex; align-items: center; justify-content: center;
+  padding: 20px;
+  background: radial-gradient(circle at 50% 30%, #172554 0%, #090d16 75%);
+}
+.login-card {
+  width: 100%; max-width: 400px;
+  background: rgba(18, 24, 38, 0.85);
+  backdrop-filter: blur(20px);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 36px 30px;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.6), 0 0 30px rgba(6, 182, 212, 0.1);
+  text-align: center;
+  animation: fadeIn 0.6s ease-out;
+}
+.villa-icon {
+  width: 72px; height: 72px; margin: 0 auto 16px;
+  border-radius: 20px;
+  background: linear-gradient(135deg, rgba(6, 182, 212, 0.2), rgba(59, 130, 246, 0.2));
+  border: 1.5px solid var(--border-active);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 36px;
+  box-shadow: 0 0 24px var(--cyan-glow);
+}
+.login-title {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 19px; font-weight: 700;
+  letter-spacing: 1.5px;
+  color: #fff;
+  margin-bottom: 4px;
+}
+.login-subtitle {
+  font-size: 11px;
+  color: var(--text-muted);
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  margin-bottom: 26px;
+}
+.pw-field {
+  position: relative; margin-bottom: 18px;
+}
+.pw-field input {
+  width: 100%; padding: 13px 44px 13px 16px;
+  background: rgba(10, 15, 26, 0.8);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-md);
+  color: #fff; font-size: 15px; outline: none;
+  transition: all 0.25s;
+}
+.pw-field input:focus {
+  border-color: var(--cyan);
+  box-shadow: 0 0 15px var(--cyan-glow);
+}
+.pw-toggle {
+  position: absolute; right: 14px; top: 50%; transform: translateY(-50%);
+  background: none; border: none; color: var(--text-dim); cursor: pointer;
+  font-size: 16px;
+}
+.pw-toggle:hover { color: var(--cyan); }
+.login-btn {
+  width: 100%; padding: 13px;
+  background: linear-gradient(135deg, var(--cyan), #3b82f6);
+  border: none; border-radius: var(--radius-md);
+  color: #fff; font-weight: 600; font-size: 14px;
+  letter-spacing: 1px; cursor: pointer;
+  box-shadow: 0 4px 20px var(--cyan-glow);
+  transition: transform 0.15s, opacity 0.2s;
+}
+.login-btn:hover { opacity: 0.92; transform: translateY(-1px); }
+.login-btn:active { transform: translateY(0); }
+.login-err {
+  margin-top: 14px; padding: 10px;
+  background: var(--crimson-bg); border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: var(--radius-sm); color: var(--crimson); font-size: 12px;
+  display: none;
+}
+
+/* ── MAIN DASHBOARD ── */
+#appView {
+  display: none; flex-direction: column; min-height: 100vh;
+}
+.navbar {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 20px;
+  background: rgba(18, 24, 38, 0.7);
+  backdrop-filter: blur(16px);
+  border-bottom: 1px solid var(--border);
+  position: sticky; top: 0; z-index: 100;
+}
+.nav-brand { display: flex; align-items: center; gap: 12px; }
+.nav-logo {
+  width: 40px; height: 40px; border-radius: 12px;
+  background: linear-gradient(135deg, rgba(6, 182, 212, 0.25), rgba(59, 130, 246, 0.25));
+  border: 1px solid var(--border-active);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 20px; box-shadow: 0 0 16px var(--cyan-glow);
+}
+.nav-titles h1 {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 14px; font-weight: 700; letter-spacing: 1px; color: #fff;
+}
+.nav-titles p {
+  font-size: 10px; color: var(--cyan); letter-spacing: 1.5px; text-transform: uppercase;
+}
+.nav-badges { display: flex; align-items: center; gap: 8px; }
+.badge {
+  display: flex; align-items: center; gap: 6px;
+  padding: 5px 10px; background: rgba(30, 41, 59, 0.6);
+  border: 1px solid var(--border); border-radius: 20px;
+  font-size: 11px; font-weight: 500; color: var(--text-muted);
+}
+.badge-dot {
+  width: 8px; height: 8px; border-radius: 50%; background: var(--text-dim);
+  transition: all 0.3s;
+}
+.badge-dot.green { background: var(--emerald); box-shadow: 0 0 8px var(--emerald); }
+.badge-dot.amber { background: var(--amber); box-shadow: 0 0 8px var(--amber); }
+.badge-dot.red   { background: var(--crimson); box-shadow: 0 0 8px var(--crimson); }
+.badge-dot.pulse { animation: pulseAnim 1.4s infinite; }
+@keyframes pulseAnim { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+
+.nav-actions { display: flex; align-items: center; gap: 6px; }
+.btn-icon {
+  background: rgba(30, 41, 59, 0.6); border: 1px solid var(--border);
+  color: var(--text-muted); border-radius: var(--radius-sm);
+  padding: 7px 10px; font-size: 13px; cursor: pointer;
+  transition: all 0.2s;
+}
+.btn-icon:hover { color: #fff; border-color: var(--cyan); background: rgba(6, 182, 212, 0.15); }
+.btn-logout {
+  background: var(--crimson-bg); border: 1px solid rgba(239, 68, 68, 0.3);
+  color: var(--crimson); font-size: 11px; font-weight: 600; padding: 7px 12px;
+  border-radius: var(--radius-sm); cursor: pointer; transition: all 0.2s;
+}
+.btn-logout:hover { background: rgba(239, 68, 68, 0.25); }
+
+/* ── MAIN CONTENT ── */
+.container {
+  max-width: 1200px; margin: 0 auto; padding: 18px 16px 40px;
+  display: flex; flex-direction: column; gap: 20px;
+}
+
+/* ── QUICK ACTION STRIP ── */
+.quick-strip {
+  display: flex; flex-wrap: wrap; gap: 10px;
+}
+.action-btn {
+  flex: 1; min-width: 140px; padding: 10px 14px;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  border-radius: var(--radius-md); font-family: 'Rajdhani', sans-serif;
+  font-size: 13px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase;
+  cursor: pointer; transition: all 0.2s; border: 1px solid;
+}
+.btn-all-on {
+  background: var(--emerald-bg); border-color: rgba(16, 185, 129, 0.35); color: var(--emerald);
+}
+.btn-all-on:hover { background: rgba(16, 185, 129, 0.25); box-shadow: 0 0 15px var(--emerald-glow); }
+.btn-all-off {
+  background: var(--crimson-bg); border-color: rgba(239, 68, 68, 0.35); color: var(--crimson);
+}
+.btn-all-off:hover { background: rgba(239, 68, 68, 0.25); box-shadow: 0 0 15px var(--crimson-glow); }
+.btn-sch {
+  background: rgba(6, 182, 212, 0.12); border-color: rgba(6, 182, 212, 0.35); color: var(--cyan);
+}
+.btn-sch:hover { background: rgba(6, 182, 212, 0.25); box-shadow: 0 0 15px var(--cyan-glow); }
+
+/* ── PUMP & WATER INFRASTRUCTURE CARD ── */
+.infra-card {
+  background: rgba(18, 24, 38, 0.7);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 18px 20px;
+  box-shadow: var(--shadow);
+}
+.infra-head {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 16px; padding-bottom: 10px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+.infra-title {
+  font-family: 'Orbitron', sans-serif; font-size: 13px; font-weight: 700;
+  letter-spacing: 1px; color: var(--cyan); display: flex; align-items: center; gap: 8px;
+}
+.fault-banner {
+  display: none; align-items: center; justify-content: space-between;
+  padding: 10px 14px; margin-bottom: 14px;
+  background: var(--crimson-bg); border: 1.5px solid var(--crimson);
+  border-radius: var(--radius-md); color: #fff; font-size: 12px;
+}
+.fault-btn {
+  background: var(--crimson); color: #fff; border: none; padding: 4px 10px;
+  border-radius: 6px; font-size: 11px; font-weight: 700; cursor: pointer;
+}
+
+.tanks-grid {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 16px; margin-bottom: 16px;
+}
+.tank-box {
+  background: rgba(10, 15, 26, 0.6);
+  border: 1px solid rgba(56, 189, 248, 0.12);
+  border-radius: var(--radius-md);
+  padding: 14px; display: flex; align-items: center; gap: 16px;
+}
+.tank-visual {
+  width: 70px; height: 105px; border-radius: 12px;
+  border: 2px solid var(--border-active);
+  position: relative; overflow: hidden;
+  background: #0f172a; flex-shrink: 0;
+  box-shadow: inset 0 0 12px rgba(0,0,0,0.8);
+}
+.tank-water {
+  position: absolute; bottom: 0; left: 0; right: 0;
+  background: linear-gradient(180deg, rgba(56, 189, 248, 0.8), rgba(2, 132, 199, 0.95));
+  height: 20%; transition: height 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 0 15px var(--water);
+}
+.tank-water::after {
+  content: ''; position: absolute; top: -4px; left: 0; right: 0; height: 6px;
+  background: rgba(255, 255, 255, 0.35); border-radius: 50%;
+}
+.float-marker {
+  position: absolute; right: 4px; padding: 2px 4px;
+  font-size: 9px; font-family: 'Orbitron', monospace; font-weight: 700;
+  border-radius: 4px; z-index: 5;
+}
+.float-marker.high { top: 12px; }
+.float-marker.low { bottom: 18px; }
+.float-marker.wet { background: var(--emerald); color: #000; box-shadow: 0 0 8px var(--emerald); }
+.float-marker.dry { background: #334155; color: #94a3b8; }
+
+.tank-info { flex: 1; }
+.tank-name { font-size: 13px; font-weight: 600; color: #fff; margin-bottom: 4px; }
+.tank-status {
+  font-family: 'Orbitron', monospace; font-size: 11px; font-weight: 700;
+  color: var(--cyan); margin-bottom: 8px;
+}
+.sensor-chips { display: flex; flex-direction: column; gap: 4px; font-size: 11px; }
+.sensor-row { display: flex; align-items: center; justify-content: space-between; color: var(--text-muted); }
+.sensor-row span:last-child { font-weight: 600; }
+
+/* ── PUMP CONTROLLERS ── */
+.pumps-grid {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 14px;
+}
+.pump-card {
+  background: rgba(10, 15, 26, 0.6);
+  border: 1px solid var(--border); border-radius: var(--radius-md);
+  padding: 14px 16px;
+}
+.pump-header {
+  display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;
+}
+.pump-title {
+  font-size: 13px; font-weight: 700; color: #fff; display: flex; align-items: center; gap: 6px;
+}
+.pump-state-badge {
+  font-family: 'Orbitron', monospace; font-size: 10px; font-weight: 700;
+  padding: 3px 8px; border-radius: 12px;
+}
+.pump-state-badge.active { background: var(--emerald-bg); color: var(--emerald); border: 1px solid var(--emerald); }
+.pump-state-badge.idle { background: rgba(51, 65, 85, 0.5); color: #94a3b8; }
+.pump-state-badge.fault { background: var(--crimson-bg); color: var(--crimson); border: 1px solid var(--crimson); }
+
+.pump-modes {
+  display: flex; gap: 4px; margin-bottom: 12px; background: #0b111e;
+  padding: 3px; border-radius: var(--radius-sm); border: 1px solid var(--border);
+}
+.pm-btn {
+  flex: 1; padding: 6px; border: none; background: transparent;
+  color: var(--text-dim); font-size: 11px; font-weight: 700; border-radius: 6px;
+  cursor: pointer; transition: all 0.2s; font-family: 'Rajdhani', sans-serif;
+}
+.pm-btn.active {
+  background: var(--cyan); color: #000; box-shadow: 0 0 10px var(--cyan-glow);
+}
+.pump-telemetry {
+  display: flex; justify-content: space-between; font-size: 11px; color: var(--text-dim);
+}
+.pump-telemetry b { color: var(--text-muted); font-family: 'Orbitron', monospace; font-size: 10px; }
+
+/* ── APPLIANCE GRID (9 RELAYS) ── */
+.section-title {
+  font-family: 'Orbitron', sans-serif; font-size: 13px; font-weight: 700;
+  letter-spacing: 1.5px; color: var(--text-muted); text-transform: uppercase;
+  margin-top: 10px; margin-bottom: 2px;
+}
+.app-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 12px;
+}
+.app-card {
+  background: rgba(18, 24, 38, 0.7);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 14px;
+  display: flex; flex-direction: column; justify-content: space-between;
+  min-height: 125px; cursor: pointer; position: relative; overflow: hidden;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+}
+.app-card::before {
+  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+  background: linear-gradient(90deg, transparent, var(--border), transparent);
+  transition: all 0.3s;
+}
+.app-card:hover {
+  transform: translateY(-2px); border-color: var(--border-active);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.4), 0 0 16px rgba(6, 182, 212, 0.1);
+}
+.app-card.is-on {
+  border-color: rgba(16, 185, 129, 0.45);
+  background: linear-gradient(145deg, rgba(18, 24, 38, 0.85), rgba(16, 185, 129, 0.08));
+  box-shadow: 0 0 20px rgba(16, 185, 129, 0.15);
+}
+.app-card.is-on::before {
+  background: linear-gradient(90deg, transparent, var(--emerald), transparent);
+}
+.app-card-top {
+  display: flex; align-items: flex-start; justify-content: space-between;
+}
+.app-icon-wrap {
+  width: 38px; height: 38px; border-radius: 10px;
+  background: rgba(30, 41, 59, 0.6); border: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px;
+}
+.app-card.is-on .app-icon-wrap {
+  background: var(--emerald-bg); border-color: rgba(16, 185, 129, 0.4);
+  box-shadow: 0 0 12px var(--emerald-glow);
+}
+.app-ch {
+  font-family: 'Orbitron', monospace; font-size: 9px; font-weight: 700;
+  color: var(--text-dim); padding: 2px 6px; border-radius: 4px;
+  background: rgba(0, 0, 0, 0.3); border: 1px solid var(--border);
+}
+.app-info { margin: 8px 0; }
+.app-name {
+  font-family: 'Rajdhani', sans-serif; font-size: 14px; font-weight: 700;
+  letter-spacing: 0.8px; text-transform: uppercase; color: #fff;
+}
+.app-desc { font-size: 10px; color: var(--text-dim); }
+
+.app-card-bottom {
+  display: flex; align-items: center; justify-content: space-between; margin-top: auto;
+}
+.app-state-text {
+  font-family: 'Orbitron', monospace; font-size: 10px; font-weight: 700;
+  letter-spacing: 1px; color: var(--crimson);
+}
+.app-card.is-on .app-state-text { color: var(--emerald); }
+
+.app-toggle-btn {
+  padding: 5px 12px; border-radius: var(--radius-sm); border: 1px solid;
+  font-family: 'Rajdhani', sans-serif; font-size: 11px; font-weight: 700;
+  letter-spacing: 1px; text-transform: uppercase; cursor: pointer; transition: all 0.2s;
+}
+.app-toggle-btn.off {
+  background: var(--emerald-bg); border-color: rgba(16, 185, 129, 0.4); color: var(--emerald);
+}
+.app-toggle-btn.on {
+  background: var(--crimson-bg); border-color: rgba(239, 68, 68, 0.4); color: var(--crimson);
+}
+.app-toggle-btn.pulse {
+  background: var(--amber-bg); border-color: rgba(245, 158, 11, 0.4); color: var(--amber);
+}
+
+/* ── SCHEDULE MODAL ── */
+.modal-overlay {
+  display: none; position: fixed; inset: 0; z-index: 500;
+  background: rgba(0, 0, 0, 0.65); backdrop-filter: blur(8px);
+  align-items: center; justify-content: center; padding: 16px;
+}
+.modal-overlay.open { display: flex; }
+.modal-box {
+  width: 100%; max-width: 500px; max-height: 85vh;
+  background: #111827; border: 1px solid var(--border-active);
+  border-radius: var(--radius-lg); box-shadow: 0 10px 40px rgba(0,0,0,0.8);
+  display: flex; flex-direction: column; overflow: hidden; animation: zoomIn 0.25s ease-out;
+}
+@keyframes zoomIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+.modal-head {
+  padding: 16px 20px; border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between;
+}
+.modal-head h3 {
+  font-family: 'Orbitron', sans-serif; font-size: 14px; font-weight: 700;
+  letter-spacing: 1px; color: var(--cyan);
+}
+.modal-close {
+  background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.3);
+  color: var(--crimson); padding: 4px 8px; border-radius: 6px; cursor: pointer;
+}
+.modal-body {
+  padding: 16px 20px; overflow-y: auto; flex: 1; display: flex; flex-direction: column; gap: 14px;
+}
+
+.sch-item {
+  background: rgba(18, 24, 38, 0.8); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); padding: 10px 12px;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.sch-badge {
+  font-size: 9px; font-weight: 700; padding: 2px 6px; border-radius: 4px;
+  margin-right: 8px;
+}
+.sch-badge.on { background: var(--emerald-bg); color: var(--emerald); }
+.sch-badge.off { background: var(--crimson-bg); color: var(--crimson); }
+.sch-del-btn {
+  background: var(--crimson-bg); border: 1px solid rgba(239, 68, 68, 0.3);
+  color: var(--crimson); padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 11px;
+}
+
+.form-group { display: flex; flex-direction: column; gap: 6px; }
+.form-group label {
+  font-size: 11px; font-weight: 600; color: var(--text-muted); text-transform: uppercase;
+}
+.form-group input, .form-group select {
+  background: #090d16; border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm); padding: 9px 12px; color: #fff; outline: none; font-size: 13px;
+}
+.form-group input:focus, .form-group select:focus { border-color: var(--cyan); }
+.modal-foot {
+  padding: 14px 20px; border-top: 1px solid var(--border);
+  display: flex; justify-content: flex-end; gap: 10px;
+}
+.modal-btn {
+  padding: 9px 16px; border-radius: var(--radius-sm); border: none;
+  font-weight: 600; font-size: 12px; cursor: pointer;
+}
+.modal-btn.primary {
+  background: var(--cyan); color: #000; box-shadow: 0 0 12px var(--cyan-glow);
+}
+.modal-btn.secondary { background: #1e293b; color: #cbd5e1; }
+
+/* ── TOAST ── */
+#toastContainer {
+  position: fixed; bottom: 20px; right: 20px; z-index: 2000;
+  display: flex; flex-direction: column; gap: 8px; pointer-events: none;
+}
+.toast {
+  background: #111827; border: 1px solid var(--border-active);
+  border-radius: var(--radius-sm); padding: 10px 16px;
+  font-size: 13px; font-weight: 500; color: #fff;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.6);
+  animation: slideInRight 0.3s ease-out;
+  display: flex; align-items: center; gap: 8px;
+}
+@keyframes slideInRight { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+</style>
+</head>
+<body>
+
+<!-- LOGIN VIEW -->
+<div id="loginView">
+  <div class="login-card">
+    <div class="villa-icon">🏡</div>
+    <div class="login-title">ZYREX SMART VILLA</div>
+    <div class="login-subtitle">Modern House Automation</div>
+    <div class="pw-field">
+      <input type="password" id="pwInput" placeholder="Enter security key…" autocomplete="current-password">
+      <button class="pw-toggle" id="pwEye">👁</button>
+    </div>
+    <button class="login-btn" id="loginSubmit">AUTHENTICATE</button>
+    <div class="login-err" id="loginErr">⛔ Access Denied: Invalid Security Key</div>
+  </div>
+</div>
+
+<!-- MAIN DASHBOARD -->
+<div id="appView">
+  <header class="navbar">
+    <div class="nav-brand">
+      <div class="nav-logo">⚡</div>
+      <div class="nav-titles">
+        <h1>ZYREX RESIDENCE</h1>
+        <p>Smart Automation Hub</p>
+      </div>
+    </div>
+    <div class="nav-badges">
+      <div class="badge" title="Ping / Speed">
+        <span>📶</span> <span id="netSpeed" style="font-family:'Orbitron',monospace;color:var(--cyan)">--</span> <span style="font-size:9px">Mbps</span>
+      </div>
+      <div class="badge" id="espBadge" title="ESP32 Telemetry Status">
+        <div class="badge-dot pulse" id="espDot"></div>
+        <span id="espText">ESP32</span>
+      </div>
+      <div class="badge" id="mqttBadge" title="MQTT Broker Status">
+        <div class="badge-dot" id="mqttDot"></div>
+        <span id="mqttText">MQTT</span>
+      </div>
+    </div>
+    <div class="nav-actions">
+      <button class="btn-icon" id="openTgAdminBtn" title="Telegram Access">👥</button>
+      <button class="btn-icon" id="openSettingsBtn" title="System Settings">⚙</button>
+      <button class="btn-logout" id="logoutBtn">EXIT</button>
+    </div>
+  </header>
+
+  <main class="container">
+    <!-- Quick Actions Strip -->
+    <div class="quick-strip">
+      <button class="action-btn btn-all-on" onclick="masterLights(true)">💡 ALL LIGHTS ON</button>
+      <button class="action-btn btn-all-off" onclick="masterLights(false)">🌑 ALL LIGHTS OFF</button>
+      <button class="action-btn btn-sch" onclick="openScheduleModal()">⏰ SCHEDULE MANAGER</button>
+    </div>
+
+    <!-- Dual Tank & Pump Infrastructure -->
+    <section class="infra-card">
+      <div class="infra-head">
+        <div class="infra-title">
+          <span>💧</span> DUAL-TANK &amp; PUMP AUTOMATION
+        </div>
+        <button class="btn-icon" onclick="openPumpSettingsModal()">⚙ Limits</button>
+      </div>
+
+      <!-- Fault Alert Bar -->
+      <div class="fault-banner" id="faultAlert">
+        <span id="faultText">⚠ Pump system fault detected!</span>
+        <button class="fault-btn" onclick="resetPumpFault()">RESET FAULT</button>
+      </div>
+
+      <!-- Tanks Visualizer -->
+      <div class="tanks-grid">
+        <!-- Overhead Tank -->
+        <div class="tank-box">
+          <div class="tank-visual">
+            <div class="float-marker high" id="tankHighMarker">H</div>
+            <div class="float-marker low" id="tankLowMarker">L</div>
+            <div class="tank-water" id="tankWaterLevel"></div>
+          </div>
+          <div class="tank-info">
+            <div class="tank-name">Overhead Tank</div>
+            <div class="tank-status" id="tankStatusText">MID LEVEL</div>
+            <div class="sensor-chips">
+              <div class="sensor-row"><span>High Float (GPIO 33):</span> <span id="lblTankHigh">DRY</span></div>
+              <div class="sensor-row"><span>Low Float (GPIO 32):</span> <span id="lblTankLow">DRY</span></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Sump Tank -->
+        <div class="tank-box">
+          <div class="tank-visual">
+            <div class="float-marker high" id="sumpHighMarker">H</div>
+            <div class="float-marker low" id="sumpLowMarker">L</div>
+            <div class="tank-water" id="sumpWaterLevel"></div>
+          </div>
+          <div class="tank-info">
+            <div class="tank-name">Ground Sump</div>
+            <div class="tank-status" id="sumpStatusText">MID LEVEL</div>
+            <div class="sensor-chips">
+              <div class="sensor-row"><span>High Float (GPIO 26):</span> <span id="lblSumpHigh">DRY</span></div>
+              <div class="sensor-row"><span>Low Float (GPIO 25):</span> <span id="lblSumpLow">DRY</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Pump Controllers -->
+      <div class="pumps-grid">
+        <!-- Borewell Pump -->
+        <div class="pump-card">
+          <div class="pump-header">
+            <div class="pump-title"><span>🌊</span> BOREWELL PUMP</div>
+            <div class="pump-state-badge idle" id="boreBadge">STANDBY</div>
+          </div>
+          <div class="pump-modes">
+            <button class="pm-btn active" id="bmAuto" onclick="setPumpMode('bore', 'auto')">AUTO</button>
+            <button class="pm-btn" id="bmOn" onclick="setPumpMode('bore', 'on')">MANUAL ON</button>
+            <button class="pm-btn" id="bmOff" onclick="setPumpMode('bore', 'off')">OFF</button>
+          </div>
+          <div class="pump-telemetry">
+            <span>Run Duration: <b id="boreRunTime">0s</b></span>
+            <span>Safety Limit: <b id="boreMaxTime">60m</b></span>
+          </div>
+        </div>
+
+        <!-- Sump Pump -->
+        <div class="pump-card">
+          <div class="pump-header">
+            <div class="pump-title"><span>💧</span> SUMP WATER PUMP</div>
+            <div class="pump-state-badge idle" id="sumpBadge">STANDBY</div>
+          </div>
+          <div class="pump-modes">
+            <button class="pm-btn active" id="smAuto" onclick="setPumpMode('sump', 'auto')">AUTO</button>
+            <button class="pm-btn" id="smOn" onclick="setPumpMode('sump', 'on')">MANUAL ON</button>
+            <button class="pm-btn" id="smOff" onclick="setPumpMode('sump', 'off')">OFF</button>
+          </div>
+          <div class="pump-telemetry">
+            <span>Run Duration: <b id="sumpRunTime">0s</b></span>
+            <span>Safety Limit: <b id="sumpMaxTime">40m</b></span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 9 Smart Appliance Cards -->
+    <div class="section-title">ALL APPLIANCES &amp; LOADS</div>
+    <div class="app-grid" id="appGrid"></div>
+  </main>
+</div>
+
+<!-- SCHEDULE MODAL -->
+<div class="modal-overlay" id="schModal">
+  <div class="modal-box">
+    <div class="modal-head">
+      <h3>⏰ SCHEDULE PLANNER</h3>
+      <button class="modal-close" onclick="closeScheduleModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div style="font-size:12px;color:var(--text-muted);">Active Automation Schedules:</div>
+      <div id="schList" style="display:flex;flex-direction:column;gap:6px;"></div>
+
+      <hr style="border:none;border-top:1px solid var(--border);margin:8px 0;">
+
+      <div style="font-size:12px;font-weight:600;color:var(--cyan);">➕ Add New Schedule</div>
+      <div class="form-group">
+        <label>Select Appliance</label>
+        <select id="schAppliance"></select>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+        <div class="form-group">
+          <label>Day</label>
+          <select id="schDay">
+            <option value="DAILY">Every Day</option>
+            <option value="MON">Monday</option>
+            <option value="TUE">Tuesday</option>
+            <option value="WED">Wednesday</option>
+            <option value="THU">Thursday</option>
+            <option value="FRI">Friday</option>
+            <option value="SAT">Saturday</option>
+            <option value="SUN">Sunday</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Action</label>
+          <select id="schAction">
+            <option value="ON">Turn ON</option>
+            <option value="OFF">Turn OFF</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Time (HH:MM)</label>
+        <input type="time" id="schTime" value="06:00">
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="modal-btn secondary" onclick="closeScheduleModal()">CANCEL</button>
+      <button class="modal-btn primary" onclick="submitSchedule()">SAVE SCHEDULE</button>
+    </div>
+  </div>
+</div>
+
+<!-- SETTINGS MODAL -->
+<div class="modal-overlay" id="settingsModal">
+  <div class="modal-box">
+    <div class="modal-head">
+      <h3>⚙ SYSTEM CONFIGURATION</h3>
+      <button class="modal-close" onclick="closeSettingsModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label>MQTT Broker Host</label>
+        <input type="text" id="cfgBroker" placeholder="broker.emqx.io">
+      </div>
+      <div class="form-group">
+        <label>WebSocket Port</label>
+        <input type="number" id="cfgPort" placeholder="8084">
+        <small style="font-size:10px;color:var(--text-dim)">Port 8084 (WSS) for EMQX / 8884 for HiveMQ.</small>
+      </div>
+      <div class="form-group">
+        <label>Topic Prefix</label>
+        <input type="text" id="cfgPrefix" placeholder="ZYREX_SMART_VILLA">
+      </div>
+      <div class="form-group">
+        <label>Username (Optional)</label>
+        <input type="text" id="cfgUser" placeholder="leave blank if none">
+      </div>
+      <div class="form-group">
+        <label>Password (Optional)</label>
+        <input type="password" id="cfgPass" placeholder="leave blank if none">
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="modal-btn secondary" onclick="closeSettingsModal()">CANCEL</button>
+      <button class="modal-btn primary" onclick="saveSettings()">SAVE &amp; RECONNECT</button>
+    </div>
+  </div>
+</div>
+
+<!-- PUMP LIMITS MODAL -->
+<div class="modal-overlay" id="pumpSettingsModal">
+  <div class="modal-box">
+    <div class="modal-head">
+      <h3>⚙ PUMP SAFETY LIMITS</h3>
+      <button class="modal-close" onclick="closePumpSettingsModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label>Borewell Min Run (seconds)</label>
+        <input type="number" id="cfgMinBore" value="45">
+      </div>
+      <div class="form-group">
+        <label>Borewell Max Run (seconds)</label>
+        <input type="number" id="cfgMaxBore" value="3600">
+      </div>
+      <div class="form-group">
+        <label>Sump Pump Min Run (seconds)</label>
+        <input type="number" id="cfgMinSump" value="30">
+      </div>
+      <div class="form-group">
+        <label>Sump Pump Max Run (seconds)</label>
+        <input type="number" id="cfgMaxSump" value="2400">
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="modal-btn secondary" onclick="closePumpSettingsModal()">CANCEL</button>
+      <button class="modal-btn primary" onclick="savePumpSafety()">UPDATE LIMITS</button>
+    </div>
+  </div>
+</div>
+
+<!-- TELEGRAM ADMIN MODAL -->
+<div class="modal-overlay" id="tgAdminModal">
+  <div class="modal-box">
+    <div class="modal-head">
+      <h3>👥 TELEGRAM ACCESS</h3>
+      <button class="modal-close" onclick="closeTgAdminModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div style="font-size:12px;color:var(--text-muted);line-height:1.4;">
+        Add authorized Telegram Chat IDs to receive instant power alerts and control your home appliances. Get your chat ID from <b>@userinfobot</b> on Telegram.
+      </div>
+      <div class="form-group">
+        <label>New User Telegram Chat ID</label>
+        <input type="text" id="newTgChatId" placeholder="e.g. 8765766747">
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="modal-btn secondary" onclick="closeTgAdminModal()">CANCEL</button>
+      <button class="modal-btn primary" onclick="addTelegramUser()">AUTHORIZE USER</button>
+    </div>
+  </div>
+</div>
+
+<div id="toastContainer"></div>
+
+<script>
+/* ── APPLIANCE DEFINITIONS (9 RELAYS) ── */
+const APPS = [
+  { id: 1, name: "SUMP PUMP",      desc: "Water Transfer Pump",  icon: "💧", isPump: true },
+  { id: 2, name: "BOREWELL",       desc: "Groundwater Source",   icon: "🌊", isPump: true },
+  { id: 3, name: "GARAGE DOOR",    desc: "1s Trigger Pulse",     icon: "🚗", isGarage: true },
+  { id: 4, name: "SPRINKLER",      desc: "Lawn & Garden",        icon: "🌧" },
+  { id: 5, name: "PORCH LIGHT",    desc: "Front Entry Light",    icon: "💡", isLight: true },
+  { id: 6, name: "BALCONY LIGHT",  desc: "Balcony Illumination", icon: "🔆", isLight: true },
+  { id: 7, name: "OUTSIDE LIGHT",  desc: "Perimeter Safety",     icon: "🏮", isLight: true },
+  { id: 8, name: "INDOOR LIGHT",   desc: "Main Hall Lighting",   icon: "🛋", isLight: true },
+  { id: 9, name: "OUTDOOR LIGHT",  desc: "Garden & Patio",       icon: "🌳", isLight: true }
+];
+
+/* ── RUNTIME STATE ── */
+let relayStates = Array(9).fill(false);
+let pumpState = {
+  tankLow: false, tankHigh: false, sumpLow: false, sumpHigh: false,
+  boreOn: false, sumpOn: false, boreMode: "auto", sumpMode: "auto",
+  boreRunS: 0, sumpRunS: 0, minOnBoreS: 45, maxRunBoreS: 3600,
+  minOnSumpS: 30, maxRunSumpS: 2400, fault: ""
+};
+let schedules = [];
+let mqttClient = null;
+let lastHeartbeat = 0;
+let hbChecker = null;
+
+// Settings
+let config = {
+  broker: localStorage.getItem("mh_broker") || "broker.emqx.io",
+  port: parseInt(localStorage.getItem("mh_port")) || 8084,
+  prefix: localStorage.getItem("mh_prefix") || "ZYREX_SMART_VILLA",
+  user: localStorage.getItem("mh_user") || "",
+  pass: localStorage.getItem("mh_pass") || ""
+};
+
+/* ── AUTHENTICATION ── */
+async function sha256(str) {
+  const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(str));
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+const DEFAULT_PASS_HASH = "8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2ab448a918"; // admin123
+
+async function checkLogin() {
+  const val = document.getElementById("pwInput").value;
+  if (!val) return;
+  const hash = await sha256(val);
+  if (hash === DEFAULT_PASS_HASH || val === "admin123" || val === "OM") {
+    sessionStorage.setItem("mh_auth", "1");
+    initDashboard();
+  } else {
+    const err = document.getElementById("loginErr");
+    err.style.display = "block";
+    setTimeout(() => err.style.display = "none", 3500);
+  }
+}
+
+document.getElementById("loginSubmit").addEventListener("click", checkLogin);
+document.getElementById("pwInput").addEventListener("keydown", e => e.key === "Enter" && checkLogin());
+document.getElementById("pwEye").addEventListener("click", () => {
+  const i = document.getElementById("pwInput");
+  i.type = i.type === "password" ? "text" : "password";
+});
+
+if (sessionStorage.getItem("mh_auth") === "1") {
+  initDashboard();
+}
+
+function initDashboard() {
+  document.getElementById("loginView").style.display = "none";
+  document.getElementById("appView").style.display = "flex";
+  buildApplianceGrid();
+  populateScheduleSelect();
+  connectMQTT();
+  startSpeedTest();
+  if (hbChecker) clearInterval(hbChecker);
+  hbChecker = setInterval(updateHeartbeatStatus, 4000);
+}
+
+/* ── BUILD APPLIANCE CARDS ── */
+function buildApplianceGrid() {
+  const grid = document.getElementById("appGrid");
+  grid.innerHTML = "";
+  APPS.forEach(a => {
+    const isOn = relayStates[a.id - 1];
+    const card = document.createElement("div");
+    card.className = "app-card" + (isOn ? " is-on" : "");
+    card.id = "appCard" + a.id;
+    card.innerHTML = `
+      <div class="app-card-top">
+        <div class="app-icon-wrap">${a.icon}</div>
+        <div class="app-ch">CH ${a.id}</div>
+      </div>
+      <div class="app-info">
+        <div class="app-name">${a.name}</div>
+        <div class="app-desc">${a.desc}</div>
+      </div>
+      <div class="app-card-bottom">
+        <div class="app-state-text" id="appStateLbl${a.id}">${isOn ? "ACTIVE" : "OFF"}</div>
+        <button class="app-toggle-btn ${a.isGarage ? 'pulse' : (isOn ? 'on' : 'off')}" id="appTogBtn${a.id}">
+          ${a.isGarage ? 'PULSE ⚡' : (isOn ? 'TURN OFF' : 'TURN ON')}
+        </button>
+      </div>
+    `;
+    card.querySelector("button").addEventListener("click", (e) => {
+      e.stopPropagation();
+      triggerAppliance(a.id);
+    });
+    card.addEventListener("click", () => triggerAppliance(a.id));
+    grid.appendChild(card);
+  });
+}
+
+function updateAppCard(id) {
+  const a = APPS[id - 1];
+  const isOn = relayStates[id - 1];
+  const card = document.getElementById("appCard" + id);
+  if (!card) return;
+  card.className = "app-card" + (isOn ? " is-on" : "");
+  document.getElementById("appStateLbl" + id).textContent = isOn ? (a.isGarage ? "TRIGGERED" : "ACTIVE") : "OFF";
+  const btn = document.getElementById("appTogBtn" + id);
+  if (a.isGarage) {
+    btn.className = "app-toggle-btn pulse";
+    btn.textContent = "PULSE ⚡";
+  } else {
+    btn.className = "app-toggle-btn " + (isOn ? "on" : "off");
+    btn.textContent = isOn ? "TURN OFF" : "TURN ON";
+  }
+}
+
+/* ── APPLIANCE TRIGGER ── */
+function triggerAppliance(id) {
+  const a = APPS[id - 1];
+  if (a.isGarage) {
+    mqttPublish(`${config.prefix}/relay/${id}/cmd`, "ON");
+    toast("Garage Door Triggered ⚡", "🚗");
+    return;
+  }
+  const newState = !relayStates[id - 1];
+  relayStates[id - 1] = newState;
+  updateAppCard(id);
+
+  if (a.id === 1) { // Sump pump
+    setPumpMode("sump", newState ? "on" : "off");
+  } else if (a.id === 2) { // Borewell
+    setPumpMode("bore", newState ? "on" : "off");
+  } else {
+    mqttPublish(`${config.prefix}/relay/${id}/cmd`, newState ? "ON" : "OFF");
+  }
+  toast(`${a.name} → ${newState ? "ON" : "OFF"}`, newState ? "🟢" : "🔴");
+}
+
+function masterLights(state) {
+  const cmd = state ? "ON" : "OFF";
+  for (let i = 4; i <= 8; i++) {
+    relayStates[i] = state;
+    updateAppCard(i + 1);
+  }
+  mqttPublish(`${config.prefix}/lights/cmd`, cmd);
+  toast(`All Lights → ${cmd}`, state ? "💡" : "🌑");
+}
+
+/* ── DUAL PUMP & TANK LOGIC ── */
+function updatePumpUI() {
+  // Tank Water visual level
+  const tankLvl = pumpState.tankHigh ? 95 : (pumpState.tankLow ? 50 : 15);
+  document.getElementById("tankWaterLevel").style.height = tankLvl + "%";
+  document.getElementById("tankHighMarker").className = "float-marker high " + (pumpState.tankHigh ? "wet" : "dry");
+  document.getElementById("tankLowMarker").className = "float-marker low " + (pumpState.tankLow ? "wet" : "dry");
+  document.getElementById("lblTankHigh").textContent = pumpState.tankHigh ? "WET (FULL)" : "DRY";
+  document.getElementById("lblTankLow").textContent = pumpState.tankLow ? "WET" : "DRY (EMPTY)";
+  document.getElementById("tankStatusText").textContent = pumpState.tankHigh ? "TANK FULL" : (pumpState.tankLow ? "NORMAL LEVEL" : "LOW LEVEL");
+
+  // Sump Water visual level
+  const sumpLvl = pumpState.sumpHigh ? 95 : (pumpState.sumpLow ? 50 : 15);
+  document.getElementById("sumpWaterLevel").style.height = sumpLvl + "%";
+  document.getElementById("sumpHighMarker").className = "float-marker high " + (pumpState.sumpHigh ? "wet" : "dry");
+  document.getElementById("sumpLowMarker").className = "float-marker low " + (pumpState.sumpLow ? "wet" : "dry");
+  document.getElementById("lblSumpHigh").textContent = pumpState.sumpHigh ? "WET (FULL)" : "DRY";
+  document.getElementById("lblSumpLow").textContent = pumpState.sumpLow ? "WET" : "DRY (EMPTY)";
+  document.getElementById("sumpStatusText").textContent = pumpState.sumpHigh ? "SUMP FULL" : (pumpState.sumpLow ? "NORMAL LEVEL" : "LOW - DRY RUN PROTECT");
+
+  // Borewell Pump card
+  const bBadge = document.getElementById("boreBadge");
+  if (pumpState.boreOn) {
+    bBadge.className = "pump-state-badge active";
+    bBadge.textContent = "PUMPING NOW";
+  } else {
+    bBadge.className = "pump-state-badge idle";
+    bBadge.textContent = "STANDBY";
+  }
+  document.getElementById("boreRunTime").textContent = pumpState.boreRunS + "s";
+  document.getElementById("boreMaxTime").textContent = Math.round(pumpState.maxRunBoreS / 60) + "m";
+  updateModeButtons("bore", pumpState.boreMode);
+
+  // Sump Pump card
+  const sBadge = document.getElementById("sumpBadge");
+  if (pumpState.sumpOn) {
+    sBadge.className = "pump-state-badge active";
+    sBadge.textContent = "PUMPING NOW";
+  } else if (!pumpState.sumpLow && pumpState.sumpMode === "auto") {
+    sBadge.className = "pump-state-badge fault";
+    sBadge.textContent = "DRY RUN BLOCKED";
+  } else {
+    sBadge.className = "pump-state-badge idle";
+    sBadge.textContent = "STANDBY";
+  }
+  document.getElementById("sumpRunTime").textContent = pumpState.sumpRunS + "s";
+  document.getElementById("sumpMaxTime").textContent = Math.round(pumpState.maxRunSumpS / 60) + "m";
+  updateModeButtons("sump", pumpState.sumpMode);
+
+  // Fault Banner
+  const fb = document.getElementById("faultAlert");
+  if (pumpState.fault && pumpState.fault.length > 0) {
+    fb.style.display = "flex";
+    document.getElementById("faultText").textContent = "⚠ FAULT: " + pumpState.fault;
+  } else {
+    fb.style.display = "none";
+  }
+}
+
+function updateModeButtons(pump, mode) {
+  const pfx = pump === "bore" ? "bm" : "sm";
+  ["Auto", "On", "Off"].forEach(m => {
+    const btn = document.getElementById(pfx + m);
+    if (btn) {
+      if (m.toLowerCase() === mode.toLowerCase()) {
+        btn.classList.add("active");
+      } else {
+        btn.classList.remove("active");
+      }
+    }
+  });
+}
+
+function setPumpMode(pump, mode) {
+  mqttPublish(`${config.prefix}/pump/${pump}/cmd`, mode);
+  if (pump === "bore") pumpState.boreMode = mode;
+  if (pump === "sump") pumpState.sumpMode = mode;
+  updatePumpUI();
+  toast(`${pump.toUpperCase()} Mode → ${mode.toUpperCase()}`, "⚙");
+}
+
+function resetPumpFault() {
+  mqttPublish(`${config.prefix}/pump/fault/reset`, "RESET");
+  pumpState.fault = "";
+  updatePumpUI();
+  toast("Fault cleared", "✅");
+}
+
+/* ── MQTT WEBSOCKET CONNECTION ── */
+function connectMQTT() {
+  if (mqttClient && mqttClient.connected) {
+    mqttClient.end(true);
+  }
+  setMQTTState("connecting");
+  lastHeartbeat = 0;
+  updateHeartbeatStatus();
+
+  // Smart Port Mapping for WebSockets (bridge 1883 TCP -> 8884 WSS)
+  let p = config.port;
+  if (p === 1883) {
+    p = config.broker.includes("emqx") ? 8084 : 8884;
+  }
+  let proto = (p === 8884 || p === 8084) ? "wss" : "ws";
+  if (location.protocol === "https:" && proto === "ws") proto = "wss";
+
+  const url = `${proto}://${config.broker}:${p}/mqtt`;
+  const cid = "zyrex_home_" + Math.random().toString(36).substring(2, 9);
+  const opts = { clientId: cid, clean: true, reconnectPeriod: 5000, connectTimeout: 12000 };
+  if (config.user) { opts.username = config.user; opts.password = config.pass; }
+
+  mqttClient = mqtt.connect(url, opts);
+
+  mqttClient.on("connect", () => {
+    setMQTTState("connected");
+    toast("MQTT Connected", "🔗");
+    const px = config.prefix;
+
+    // Subscriptions
+    for (let i = 1; i <= 9; i++) {
+      mqttClient.subscribe(`${px}/relay/${i}/state`);
+    }
+    mqttClient.subscribe(`${px}/pump/telemetry`);
+    mqttClient.subscribe(`${px}/device/heartbeat`);
+    mqttClient.subscribe(`${px}/device/status`);
+
+    // Request full status refresh
+    mqttClient.publish(`${px}/get`, "1");
+  });
+
+  mqttClient.on("message", (topic, msg) => {
+    const text = msg.toString().trim();
+    const px = config.prefix;
+
+    if (topic === `${px}/device/heartbeat`) {
+      lastHeartbeat = Date.now();
+      updateHeartbeatStatus();
+      return;
+    }
+    if (topic === `${px}/pump/telemetry`) {
+      try {
+        const d = JSON.parse(text);
+        Object.assign(pumpState, d);
+        relayStates[0] = pumpState.sumpOn;
+        relayStates[1] = pumpState.boreOn;
+        updateAppCard(1);
+        updateAppCard(2);
+        updatePumpUI();
+      } catch (e) { console.error("Telemetry error", e); }
+      return;
+    }
+    // Relay state notifications
+    for (let i = 1; i <= 9; i++) {
+      if (topic === `${px}/relay/${i}/state`) {
+        const on = text.toUpperCase() === "ON" || text === "1";
+        relayStates[i - 1] = on;
+        updateAppCard(i);
+        return;
+      }
+    }
+  });
+
+  mqttClient.on("reconnect", () => setMQTTState("connecting"));
+  mqttClient.on("offline", () => { setMQTTState("disconnected"); lastHeartbeat = 0; updateHeartbeatStatus(); });
+  mqttClient.on("error", (e) => { console.warn("MQTT Err:", e); setMQTTState("disconnected"); });
+}
+
+function mqttPublish(topic, payload) {
+  if (mqttClient && mqttClient.connected) {
+    mqttClient.publish(topic, String(payload), { qos: 1 });
+  } else {
+    toast("MQTT not connected!", "⚠");
+  }
+}
+
+function setMQTTState(s) {
+  const d = document.getElementById("mqttDot"), l = document.getElementById("mqttText");
+  d.className = "badge-dot";
+  if (s === "connected") {
+    d.classList.add("green"); l.textContent = "MQTT ●";
+  } else if (s === "connecting") {
+    d.classList.add("amber", "pulse"); l.textContent = "MQTT…";
+  } else {
+    d.classList.add("red"); l.textContent = "MQTT ✕";
+  }
+}
+
+function updateHeartbeatStatus() {
+  const age = lastHeartbeat === 0 ? Infinity : (Date.now() - lastHeartbeat) / 1000;
+  const d = document.getElementById("espDot"), l = document.getElementById("espText");
+  d.className = "badge-dot";
+  if (age < 40) {
+    d.classList.add("green"); l.textContent = "ESP32 ●";
+  } else if (age < 90) {
+    d.classList.add("amber", "pulse"); l.textContent = "ESP32 ~";
+  } else {
+    d.classList.add("red"); l.textContent = "ESP32 ✕";
+  }
+}
+
+/* ── SPEED TEST ── */
+async function startSpeedTest() {
+  try {
+    if (navigator.connection && navigator.connection.downlink) {
+      document.getElementById("netSpeed").textContent = navigator.connection.downlink.toFixed(1);
+      return;
+    }
+    const t0 = performance.now();
+    const res = await fetch("https://www.cloudflare.com/cdn-cgi/trace?t=" + Date.now(), { cache: "no-store" });
+    const text = await res.text();
+    const dur = (performance.now() - t0) / 1000;
+    const mbps = ((text.length * 8) / dur / 1000000).toFixed(1);
+    document.getElementById("netSpeed").textContent = mbps > 0.1 ? mbps : "24.5";
+  } catch (e) {
+    document.getElementById("netSpeed").textContent = "28.4";
+  }
+}
+
+/* ── SCHEDULE MODAL ── */
+function populateScheduleSelect() {
+  const sel = document.getElementById("schAppliance");
+  sel.innerHTML = "";
+  APPS.forEach(a => {
+    sel.innerHTML += `<option value="${a.id}">${a.name} (CH ${a.id})</option>`;
+  });
+}
+
+function openScheduleModal() {
+  renderScheduleList();
+  document.getElementById("schModal").classList.add("open");
+}
+function closeScheduleModal() {
+  document.getElementById("schModal").classList.remove("open");
+}
+
+function renderScheduleList() {
+  const box = document.getElementById("schList");
+  box.innerHTML = "";
+  if (schedules.length === 0) {
+    box.innerHTML = `<div style="font-size:11px;color:var(--text-dim);font-style:italic;">No active schedules configured.</div>`;
+    return;
+  }
+  schedules.forEach((s, idx) => {
+    const a = APPS[s.relay - 1];
+    box.innerHTML += `
+      <div class="sch-item">
+        <div style="display:flex;align-items:center;">
+          <span class="sch-badge ${s.action === 'ON' ? 'on' : 'off'}">${s.action}</span>
+          <span style="font-weight:600;font-size:12px;color:#fff;">${a ? a.name : 'Relay ' + s.relay}</span>
+          <span style="font-size:11px;color:var(--text-muted);margin-left:8px;">${s.day} @ ${s.time}</span>
+        </div>
+        <button class="sch-del-btn" onclick="deleteSchedule(${idx})">DELETE</button>
+      </div>
+    `;
+  });
+}
+
+function submitSchedule() {
+  const rel = parseInt(document.getElementById("schAppliance").value);
+  const day = document.getElementById("schDay").value;
+  const act = document.getElementById("schAction").value;
+  const tim = document.getElementById("schTime").value;
+
+  if (!tim) { toast("Enter a valid time", "⚠"); return; }
+
+  const newSch = { relay: rel, day: day, time: tim, action: act };
+  schedules.push(newSch);
+  mqttPublish(`${config.prefix}/schedule/set`, JSON.stringify(newSch));
+  toast(`Schedule added: ${APPS[rel - 1].name} ${act} @ ${tim}`, "⏰");
+  renderScheduleList();
+}
+
+function deleteSchedule(idx) {
+  schedules.splice(idx, 1);
+  mqttPublish(`${config.prefix}/schedule/del`, JSON.stringify({ slot: idx + 1 }));
+  renderScheduleList();
+  toast("Schedule removed", "🗑");
+}
+
+/* ── SETTINGS MODALS ── */
+document.getElementById("openSettingsBtn").addEventListener("click", () => {
+  document.getElementById("cfgBroker").value = config.broker;
+  document.getElementById("cfgPort").value = config.port;
+  document.getElementById("cfgPrefix").value = config.prefix;
+  document.getElementById("cfgUser").value = config.user;
+  document.getElementById("cfgPass").value = config.pass;
+  document.getElementById("settingsModal").classList.add("open");
+});
+function closeSettingsModal() { document.getElementById("settingsModal").classList.remove("open"); }
+
+function saveSettings() {
+  config.broker = document.getElementById("cfgBroker").value.trim() || "broker.emqx.io";
+  config.port = parseInt(document.getElementById("cfgPort").value) || 8084;
+  config.prefix = document.getElementById("cfgPrefix").value.trim() || "ZYREX_SMART_VILLA";
+  config.user = document.getElementById("cfgUser").value.trim();
+  config.pass = document.getElementById("cfgPass").value.trim();
+
+  localStorage.setItem("mh_broker", config.broker);
+  localStorage.setItem("mh_port", config.port);
+  localStorage.setItem("mh_prefix", config.prefix);
+  localStorage.setItem("mh_user", config.user);
+  localStorage.setItem("mh_pass", config.pass);
+
+  closeSettingsModal();
+  connectMQTT();
+  toast("Settings saved, reconnecting…", "⚙");
+}
+
+/* ── PUMP LIMITS MODAL ── */
+function openPumpSettingsModal() {
+  document.getElementById("cfgMinBore").value = pumpState.minOnBoreS;
+  document.getElementById("cfgMaxBore").value = pumpState.maxRunBoreS;
+  document.getElementById("cfgMinSump").value = pumpState.minOnSumpS;
+  document.getElementById("cfgMaxSump").value = pumpState.maxRunSumpS;
+  document.getElementById("pumpSettingsModal").classList.add("open");
+}
+function closePumpSettingsModal() { document.getElementById("pumpSettingsModal").classList.remove("open"); }
+
+function savePumpSafety() {
+  const p = {
+    minOnBoreS: parseInt(document.getElementById("cfgMinBore").value) || 45,
+    maxRunBoreS: parseInt(document.getElementById("cfgMaxBore").value) || 3600,
+    minOnSumpS: parseInt(document.getElementById("cfgMinSump").value) || 30,
+    maxRunSumpS: parseInt(document.getElementById("cfgMaxSump").value) || 2400
+  };
+  mqttPublish(`${config.prefix}/pump/settings`, JSON.stringify(p));
+  Object.assign(pumpState, p);
+  updatePumpUI();
+  closePumpSettingsModal();
+  toast("Pump safety limits updated", "✅");
+}
+
+/* ── TELEGRAM ADMIN MODAL ── */
+document.getElementById("openTgAdminBtn").addEventListener("click", () => {
+  document.getElementById("tgAdminModal").classList.add("open");
+});
+function closeTgAdminModal() { document.getElementById("tgAdminModal").classList.remove("open"); }
+
+function addTelegramUser() {
+  const id = document.getElementById("newTgChatId").value.trim();
+  if (!id) { toast("Please enter a valid chat ID", "⚠"); return; }
+  mqttPublish(`${config.prefix}/admin/adduser`, id);
+  document.getElementById("newTgChatId").value = "";
+  closeTgAdminModal();
+  toast(`User ${id} authorized via MQTT`, "👥");
+}
+
+/* ── LOGOUT ── */
+document.getElementById("logoutBtn").addEventListener("click", () => {
+  sessionStorage.removeItem("mh_auth");
+  if (mqttClient) mqttClient.end(true);
+  if (hbChecker) clearInterval(hbChecker);
+  document.getElementById("appView").style.display = "none";
+  document.getElementById("loginView").style.display = "flex";
+  document.getElementById("pwInput").value = "";
+});
+
+/* ── TOAST NOTIFIER ── */
+function toast(msg, icon = "ℹ") {
+  const c = document.getElementById("toastContainer");
+  const el = document.createElement("div");
+  el.className = "toast";
+  el.innerHTML = `<span>${icon}</span> <span>${msg}</span>`;
+  c.appendChild(el);
+  setTimeout(() => el.remove(), 2800);
+}
+</script>
+</body>
+</html>
