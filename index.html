@@ -628,7 +628,7 @@ body {
         <div class="infra-title">
           <span>💧</span> DUAL-TANK &amp; PUMP AUTOMATION
         </div>
-        <button class="btn-icon" onclick="openPumpSettingsModal()">⚙ Limits</button>
+        <button class="btn-icon" onclick="openScheduleModal()">⏱ Timer</button>
       </div>
 
       <!-- Water-Level Signal Visualizer -->
@@ -709,55 +709,6 @@ body {
   </main>
 </div>
 
-<!-- PUMP TIMER MODAL -->
-<div class="modal-overlay" id="schModal">
-  <div class="modal-box">
-    <div class="modal-head">
-      <h3>⏱ PUMP RUN TIMER</h3>
-      <button class="modal-close" onclick="closeScheduleModal()">✕</button>
-    </div>
-    <div class="modal-body">
-      <div class="form-group">
-        <label>Select Tank / Pump</label>
-        <select id="timerPump">
-          <option value="sump">Overhead Tank Pump (Sump Pump)</option>
-          <option value="bore">Ground Sump Pump (Borewell Pump)</option>
-        </select>
-      </div>
-      <div class="form-group">
-        <label>⏱ Run Duration (minutes) — scroll to set</label>
-        <!-- iOS-style drum-roll duration picker: hours + minutes -->
-        <div class="drum-picker-wrap">
-          <div class="drum-picker-highlight"></div>
-          <div class="drum-col" id="drumHour"></div>
-          <div class="drum-sep">h</div>
-          <div class="drum-col" id="drumMin"></div>
-        </div>
-        <div style="text-align:center;font-size:11px;color:var(--text-dim);margin-top:6px;">
-          Selected: <span id="drumTimeDisplay" style="color:var(--cyan);font-weight:700;">15 min</span>
-        </div>
-      </div>
-      <div class="form-group">
-        <label>Time Remaining</label>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
-          <div style="text-align:center;padding:10px;border:1px solid var(--border);border-radius:10px;">
-            <div style="font-size:11px;color:var(--text-muted);">Overhead Tank</div>
-            <div id="timerLeftSump" style="font-size:18px;font-weight:700;color:var(--cyan);">--</div>
-          </div>
-          <div style="text-align:center;padding:10px;border:1px solid var(--border);border-radius:10px;">
-            <div style="font-size:11px;color:var(--text-muted);">Ground Sump</div>
-            <div id="timerLeftBore" style="font-size:18px;font-weight:700;color:var(--cyan);">--</div>
-          </div>
-        </div>
-      </div>
-    </div>
-    <div class="modal-foot">
-      <button class="modal-btn secondary" onclick="cancelPumpTimer()">CANCEL TIMER</button>
-      <button class="modal-btn primary" onclick="startPumpTimerUI()">START PUMP</button>
-    </div>
-  </div>
-</div>
-
 <!-- SETTINGS MODAL -->
 <div class="modal-overlay" id="settingsModal">
   <div class="modal-box">
@@ -820,34 +771,51 @@ body {
   </div>
 </div>
 
-<!-- PUMP LIMITS MODAL -->
-<div class="modal-overlay" id="pumpSettingsModal">
+<!-- PUMP TIMER MODAL (opens from ⏱ Timer / ⚙ Limits buttons) -->
+<div class="modal-overlay" id="schModal">
   <div class="modal-box">
     <div class="modal-head">
-      <h3>⚙ PUMP SAFETY LIMITS</h3>
-      <button class="modal-close" onclick="closePumpSettingsModal()">✕</button>
+      <h3>⏱ PUMP RUN TIMER</h3>
+      <button class="modal-close" onclick="closeScheduleModal()">✕</button>
     </div>
     <div class="modal-body">
       <div class="form-group">
-        <label>Borewell Min Run (seconds)</label>
-        <input type="number" id="cfgMinBore" value="45">
+        <label>Select Tank / Pump</label>
+        <select id="timerPump">
+          <option value="sump">Overhead Tank Pump (Sump Pump)</option>
+          <option value="bore">Ground Sump Pump (Borewell Pump)</option>
+        </select>
       </div>
       <div class="form-group">
-        <label>Borewell Max Run (seconds)</label>
-        <input type="number" id="cfgMaxBore" value="3600">
+        <label>⏱ Run Duration — scroll wheels to set</label>
+        <!-- iOS-style drum-roll duration picker: hours + minutes -->
+        <div class="drum-picker-wrap">
+          <div class="drum-picker-highlight"></div>
+          <div class="drum-col" id="drumHour"></div>
+          <div class="drum-sep">h</div>
+          <div class="drum-col" id="drumMin"></div>
+        </div>
+        <div style="text-align:center;font-size:11px;color:var(--text-dim);margin-top:6px;">
+          Selected: <span id="drumTimeDisplay" style="color:var(--cyan);font-weight:700;">15 min</span>
+        </div>
       </div>
       <div class="form-group">
-        <label>Sump Pump Min Run (seconds)</label>
-        <input type="number" id="cfgMinSump" value="30">
-      </div>
-      <div class="form-group">
-        <label>Sump Pump Max Run (seconds)</label>
-        <input type="number" id="cfgMaxSump" value="2400">
+        <label>Time Remaining</label>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+          <div style="text-align:center;padding:10px;border:1px solid var(--border);border-radius:10px;">
+            <div style="font-size:11px;color:var(--text-muted);">Overhead Tank</div>
+            <div id="timerLeftSump" style="font-size:18px;font-weight:700;color:var(--cyan);">--</div>
+          </div>
+          <div style="text-align:center;padding:10px;border:1px solid var(--border);border-radius:10px;">
+            <div style="font-size:11px;color:var(--text-muted);">Ground Sump</div>
+            <div id="timerLeftBore" style="font-size:18px;font-weight:700;color:var(--cyan);">--</div>
+          </div>
+        </div>
       </div>
     </div>
     <div class="modal-foot">
-      <button class="modal-btn secondary" onclick="closePumpSettingsModal()">CANCEL</button>
-      <button class="modal-btn primary" onclick="savePumpSafety()">UPDATE LIMITS</button>
+      <button class="modal-btn secondary" onclick="cancelPumpTimer()">CANCEL TIMER</button>
+      <button class="modal-btn primary" onclick="startPumpTimerUI()">START PUMP</button>
     </div>
   </div>
 </div>
@@ -1396,30 +1364,6 @@ function saveSettings() {
   closeSettingsModal();
   connectMQTT();
   toast(`Settings saved${tok.length >= 10 ? " + Telegram config sent" : ""}`, "⚙");
-}
-
-/* ── PUMP LIMITS MODAL ── */
-function openPumpSettingsModal() {
-  document.getElementById("cfgMinBore").value = pumpState.minOnBoreS;
-  document.getElementById("cfgMaxBore").value = pumpState.maxRunBoreS;
-  document.getElementById("cfgMinSump").value = pumpState.minOnSumpS;
-  document.getElementById("cfgMaxSump").value = pumpState.maxRunSumpS;
-  document.getElementById("pumpSettingsModal").classList.add("open");
-}
-function closePumpSettingsModal() { document.getElementById("pumpSettingsModal").classList.remove("open"); }
-
-function savePumpSafety() {
-  const p = {
-    minOnBoreS: parseInt(document.getElementById("cfgMinBore").value) || 45,
-    maxRunBoreS: parseInt(document.getElementById("cfgMaxBore").value) || 3600,
-    minOnSumpS: parseInt(document.getElementById("cfgMinSump").value) || 30,
-    maxRunSumpS: parseInt(document.getElementById("cfgMaxSump").value) || 2400
-  };
-  mqttPublish(`${config.prefix}/pump/settings`, JSON.stringify(p));
-  Object.assign(pumpState, p);
-  updatePumpUI();
-  closePumpSettingsModal();
-  toast("Pump safety limits updated", "✅");
 }
 
 /* ── TELEGRAM ADMIN MODAL ── */
