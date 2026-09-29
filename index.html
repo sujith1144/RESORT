@@ -677,7 +677,6 @@ body {
           </div>
           <div class="pump-telemetry">
             <span>Run Duration: <b id="boreRunTime">0s</b></span>
-            <span>Safety Limit: <b id="boreMaxTime">60m</b></span>
           </div>
         </div>
 
@@ -694,7 +693,6 @@ body {
           </div>
           <div class="pump-telemetry">
             <span>Run Duration: <b id="sumpRunTime">0s</b></span>
-            <span>Safety Limit: <b id="sumpMaxTime">40m</b></span>
           </div>
         </div>
       </div>
@@ -1034,7 +1032,6 @@ function updatePumpUI() {
     bBadge.textContent = "STANDBY";
   }
   document.getElementById("boreRunTime").textContent = pumpState.boreRunS + "s";
-  document.getElementById("boreMaxTime").textContent = Math.round(pumpState.maxRunBoreS / 60) + "m";
   updateModeButtons("bore", pumpState.boreMode);
 
   // Sump Pump card
@@ -1047,7 +1044,6 @@ function updatePumpUI() {
     sBadge.textContent = "STANDBY";
   }
   document.getElementById("sumpRunTime").textContent = pumpState.sumpRunS + "s";
-  document.getElementById("sumpMaxTime").textContent = Math.round(pumpState.maxRunSumpS / 60) + "m";
   updateModeButtons("sump", pumpState.sumpMode);
 
   // Timer countdown displays
