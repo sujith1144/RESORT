@@ -618,7 +618,7 @@ body {
     <div class="quick-strip">
       <button class="action-btn btn-all-on" onclick="masterLights(true)">💡 ALL LIGHTS ON</button>
       <button class="action-btn btn-all-off" onclick="masterLights(false)">🌑 ALL LIGHTS OFF</button>
-      <button class="action-btn btn-sch" onclick="openScheduleModal()">⏰ SCHEDULE MANAGER</button>
+      <button class="action-btn btn-sch" onclick="openScheduleModal()">⏱ PUMP TIMER</button>
     </div>
 
     <div class="main-cols">
@@ -709,65 +709,49 @@ body {
   </main>
 </div>
 
-<!-- SCHEDULE MODAL -->
+<!-- PUMP TIMER MODAL -->
 <div class="modal-overlay" id="schModal">
   <div class="modal-box">
     <div class="modal-head">
-      <h3>⏰ SCHEDULE PLANNER</h3>
+      <h3>⏱ PUMP RUN TIMER</h3>
       <button class="modal-close" onclick="closeScheduleModal()">✕</button>
     </div>
     <div class="modal-body">
-      <div style="font-size:12px;color:var(--text-muted);">Active Automation Schedules:</div>
-      <div id="schList" style="display:flex;flex-direction:column;gap:6px;"></div>
-
-      <hr style="border:none;border-top:1px solid var(--border);margin:8px 0;">
-
-      <div style="font-size:12px;font-weight:600;color:var(--cyan);">➕ Add New Schedule</div>
       <div class="form-group">
-        <label>Select Appliance</label>
-        <select id="schAppliance"></select>
-      </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
-        <div class="form-group">
-          <label>Day</label>
-          <select id="schDay">
-            <option value="DAILY">Every Day</option>
-            <option value="MON">Monday</option>
-            <option value="TUE">Tuesday</option>
-            <option value="WED">Wednesday</option>
-            <option value="THU">Thursday</option>
-            <option value="FRI">Friday</option>
-            <option value="SAT">Saturday</option>
-            <option value="SUN">Sunday</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label>Action</label>
-          <select id="schAction">
-            <option value="ON">Turn ON</option>
-            <option value="OFF">Turn OFF</option>
-          </select>
-        </div>
+        <label>Select Tank / Pump</label>
+        <select id="timerPump">
+          <option value="sump">Overhead Tank Pump (Sump Pump)</option>
+          <option value="bore">Ground Sump Pump (Borewell Pump)</option>
+        </select>
       </div>
       <div class="form-group">
-        <label>⏱ Select Time</label>
-        <!-- iOS-style drum-roll time picker -->
+        <label>⏱ Run Duration (minutes) — scroll to set</label>
+        <!-- iOS-style drum-roll minute picker -->
         <div class="drum-picker-wrap">
           <div class="drum-picker-highlight"></div>
-          <div class="drum-col" id="drumHour"></div>
-          <div class="drum-sep">:</div>
           <div class="drum-col" id="drumMin"></div>
         </div>
         <div style="text-align:center;font-size:11px;color:var(--text-dim);margin-top:6px;">
-          Selected: <span id="drumTimeDisplay" style="color:var(--cyan);font-weight:700;">06:00</span>
+          Selected: <span id="drumTimeDisplay" style="color:var(--cyan);font-weight:700;">15 min</span>
         </div>
-        <!-- Hidden field for compatibility -->
-        <input type="hidden" id="schTime" value="06:00">
+      </div>
+      <div class="form-group">
+        <label>Time Remaining</label>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+          <div style="text-align:center;padding:10px;border:1px solid var(--border);border-radius:10px;">
+            <div style="font-size:11px;color:var(--text-muted);">Overhead Tank</div>
+            <div id="timerLeftSump" style="font-size:18px;font-weight:700;color:var(--cyan);">--</div>
+          </div>
+          <div style="text-align:center;padding:10px;border:1px solid var(--border);border-radius:10px;">
+            <div style="font-size:11px;color:var(--text-muted);">Ground Sump</div>
+            <div id="timerLeftBore" style="font-size:18px;font-weight:700;color:var(--cyan);">--</div>
+          </div>
+        </div>
       </div>
     </div>
     <div class="modal-foot">
-      <button class="modal-btn secondary" onclick="closeScheduleModal()">CANCEL</button>
-      <button class="modal-btn primary" onclick="submitSchedule()">SAVE SCHEDULE</button>
+      <button class="modal-btn secondary" onclick="cancelPumpTimer()">CANCEL TIMER</button>
+      <button class="modal-btn primary" onclick="startPumpTimerUI()">START PUMP</button>
     </div>
   </div>
 </div>
@@ -909,11 +893,11 @@ const APPS = [
 let relayStates = Array(9).fill(false);
 let pumpState = {
   tankSignalHigh: true, sumpSignalHigh: true,
+  tankLevelPct: 0, boreTimerLeftS: 0, sumpTimerLeftS: 0,
   boreOn: false, sumpOn: false, boreMode: "auto", sumpMode: "auto",
   boreRunS: 0, sumpRunS: 0, minOnBoreS: 45, maxRunBoreS: 3600,
   minOnSumpS: 30, maxRunSumpS: 2400
 };
-let schedules = [];
 let mqttClient = null;
 let lastHeartbeat = 0;
 let hbChecker = null;
@@ -963,7 +947,6 @@ function initDashboard() {
   document.getElementById("loginView").style.display = "none";
   document.getElementById("appView").style.display = "flex";
   buildApplianceGrid();
-  populateScheduleSelect();
   connectMQTT();
   startSpeedTest();
   if (hbChecker) clearInterval(hbChecker);
@@ -1055,12 +1038,15 @@ function masterLights(state) {
 
 /* ── DUAL PUMP & TANK LOGIC ── */
 function updatePumpUI() {
-  // Each tank exposes one raw GPIO signal only.
-  const tankSignal = pumpState.tankSignalHigh ? "HIGH" : "LOW";
-  document.getElementById("tankWaterLevel").style.height = (pumpState.tankSignalHigh ? 15 : 95) + "%";
-  document.getElementById("tankSignalMarker").className = "float-marker high " + (pumpState.tankSignalHigh ? "dry" : "wet");
-  document.getElementById("lblTankSignal").textContent = tankSignal;
-  document.getElementById("tankStatusText").textContent = tankSignal;
+  // Overhead tank: multi-level percentage (0/25/50/75/100)
+  const pct = Math.max(0, Math.min(100, parseInt(pumpState.tankLevelPct) || 0));
+  document.getElementById("tankWaterLevel").style.height = Math.max(pct, pct > 0 ? 8 : 2) + "%";
+  document.getElementById("tankStatusText").textContent = pct + "%";
+  document.getElementById("tankStatusText").className = "tank-status" + (pct <= 25 ? " low" : "");
+  const mk = document.getElementById("tankSignalMarker");
+  mk.className = "float-marker high " + (pct >= 100 ? "wet" : "dry");
+  mk.textContent = pct >= 100 ? "FULL" : "SIG";
+  document.getElementById("lblTankSignal").textContent = pct + "% (100% @ GPIO 32)";
 
   const sumpSignal = pumpState.sumpSignalHigh ? "HIGH" : "LOW";
   document.getElementById("sumpWaterLevel").style.height = (pumpState.sumpSignalHigh ? 15 : 95) + "%";
@@ -1094,6 +1080,10 @@ function updatePumpUI() {
   document.getElementById("sumpMaxTime").textContent = Math.round(pumpState.maxRunSumpS / 60) + "m";
   updateModeButtons("sump", pumpState.sumpMode);
 
+  // Timer countdown displays
+  const fmt = s => { s = parseInt(s) || 0; if (s <= 0) return "--"; const m = Math.floor(s / 60); return m > 0 ? (m + "m " + (s % 60) + "s") : (s + "s"); };
+  document.getElementById("timerLeftSump").textContent = fmt(pumpState.sumpTimerLeftS);
+  document.getElementById("timerLeftBore").textContent = fmt(pumpState.boreTimerLeftS);
 }
 
 function updateModeButtons(pump, mode) {
@@ -1247,59 +1237,28 @@ async function startSpeedTest() {
   }
 }
 
-/* ── SCHEDULE MODAL ── */
-function populateScheduleSelect() {
-  const sel = document.getElementById("schAppliance");
-  sel.innerHTML = "";
-  APPS.forEach(a => {
-    sel.innerHTML += `<option value="${a.id}">${a.name} (CH ${a.id})</option>`;
-  });
-}
-
-/* ── DRUM-ROLL TIME PICKER ── */
+/* ── DRUM-ROLL MINUTE PICKER (pump timer) ── */
 let drumReady = false;
-function initDrumPicker(h = 6, m = 0) {
-  const hourCol = document.getElementById("drumHour");
-  const minCol  = document.getElementById("drumMin");
-  hourCol.innerHTML = "";
-  minCol.innerHTML  = "";
-  for (let i = 0; i < 24; i++) {
+function initDrumPicker(m = 15) {
+  const minCol = document.getElementById("drumMin");
+  minCol.innerHTML = "";
+  for (let i = 0; i <= 720; i++) {
     const el = document.createElement("div");
     el.className = "drum-item";
-    el.textContent = String(i).padStart(2, "0");
-    el.dataset.val = i;
-    hourCol.appendChild(el);
-  }
-  for (let i = 0; i < 60; i++) {
-    const el = document.createElement("div");
-    el.className = "drum-item";
-    el.textContent = String(i).padStart(2, "0");
+    el.textContent = i + " min";
     el.dataset.val = i;
     minCol.appendChild(el);
   }
-  // Scroll to initial values (no animation on init)
-  hourCol.scrollTop = h * 42;
-  minCol.scrollTop  = m * 42;
+  minCol.scrollTop = m * 42;
   updateDrumDisplay();
 
-  function onScroll(col, isHour) {
-    clearTimeout(col._snapTimer);
-    col._snapTimer = setTimeout(() => {
-      const idx = Math.round(col.scrollTop / 42);
-      col.scrollTop = idx * 42;
+  minCol.addEventListener("scroll", () => {
+    clearTimeout(minCol._snapTimer);
+    minCol._snapTimer = setTimeout(() => {
+      const idx = Math.max(0, Math.min(720, Math.round(minCol.scrollTop / 42)));
+      minCol.scrollTop = idx * 42;
       updateDrumDisplay();
     }, 120);
-  }
-
-  hourCol.addEventListener("scroll", () => onScroll(hourCol, true));
-  minCol.addEventListener("scroll",  () => onScroll(minCol, false));
-
-  // Click on item scrolls it to center
-  hourCol.addEventListener("click", e => {
-    if (e.target.classList.contains("drum-item")) {
-      const v = parseInt(e.target.dataset.val);
-      hourCol.scrollTo({ top: v * 42, behavior: "smooth" });
-    }
   });
   minCol.addEventListener("click", e => {
     if (e.target.classList.contains("drum-item")) {
@@ -1312,75 +1271,35 @@ function initDrumPicker(h = 6, m = 0) {
 }
 
 function updateDrumDisplay() {
-  const hourCol = document.getElementById("drumHour");
-  const minCol  = document.getElementById("drumMin");
-  const h = Math.round(hourCol.scrollTop / 42);
-  const m = Math.round(minCol.scrollTop  / 42);
-  const hh = Math.min(23, Math.max(0, h));
-  const mm = Math.min(59, Math.max(0, m));
-  const timeStr = `${String(hh).padStart(2,"0")}:${String(mm).padStart(2,"0")}`;
-  document.getElementById("schTime").value = timeStr;
-  document.getElementById("drumTimeDisplay").textContent = timeStr;
-  // Highlight selected items
-  hourCol.querySelectorAll(".drum-item").forEach((el, i) => el.classList.toggle("selected", i === hh));
-  minCol .querySelectorAll(".drum-item").forEach((el, i) => el.classList.toggle("selected", i === mm));
+  const minCol = document.getElementById("drumMin");
+  if (!minCol) return;
+  const m = Math.max(0, Math.min(720, Math.round(minCol.scrollTop / 42)));
+  document.getElementById("drumTimeDisplay").textContent = m + " min";
+  minCol.querySelectorAll(".drum-item").forEach((el, i) => el.classList.toggle("selected", i === m));
 }
 
 function openScheduleModal() {
-  renderScheduleList();
   document.getElementById("schModal").classList.add("open");
-  if (!drumReady) {
-    setTimeout(() => initDrumPicker(6, 0), 60);
-  }
+  if (!drumReady) setTimeout(() => initDrumPicker(15), 60);
+  updatePumpUI();
 }
 function closeScheduleModal() {
   document.getElementById("schModal").classList.remove("open");
 }
 
-function renderScheduleList() {
-  const box = document.getElementById("schList");
-  box.innerHTML = "";
-  if (schedules.length === 0) {
-    box.innerHTML = `<div style="font-size:11px;color:var(--text-dim);font-style:italic;">No active schedules configured.</div>`;
-    return;
-  }
-  schedules.forEach((s, idx) => {
-    const a = APPS[s.relay - 1];
-    box.innerHTML += `
-      <div class="sch-item">
-        <div style="display:flex;align-items:center;">
-          <span class="sch-badge ${s.action === 'ON' ? 'on' : 'off'}">${s.action}</span>
-          <span style="font-weight:600;font-size:12px;color:#fff;">${a ? a.name : 'Relay ' + s.relay}</span>
-          <span style="font-size:11px;color:var(--text-muted);margin-left:8px;">${s.day} @ ${s.time}</span>
-        </div>
-        <button class="sch-del-btn" onclick="deleteSchedule(${idx})">DELETE</button>
-      </div>
-    `;
-  });
-}
-
-function submitSchedule() {
-  const rel = parseInt(document.getElementById("schAppliance").value);
-  const day = document.getElementById("schDay").value;
-  const act = document.getElementById("schAction").value;
-  // Update display before reading (in case user hasn't scrolled recently)
+function startPumpTimerUI() {
   updateDrumDisplay();
-  const tim = document.getElementById("schTime").value;
-
-  if (!tim) { toast("Select a valid time", "⚠"); return; }
-
-  const newSch = { relay: rel, day: day, time: tim, action: act };
-  schedules.push(newSch);
-  mqttPublish(`${config.prefix}/schedule/set`, JSON.stringify(newSch));
-  toast(`Schedule added: ${APPS[rel - 1].name} ${act} @ ${tim}`, "⏰");
-  renderScheduleList();
+  const mins = Math.max(0, Math.min(720, Math.round(document.getElementById("drumMin").scrollTop / 42)));
+  if (mins <= 0) { toast("Scroll to pick a duration above 0", "⚠"); return; }
+  const which = document.getElementById("timerPump").value;
+  mqttPublish(`${config.prefix}/pump/timer`, JSON.stringify({ pump: which, mins }));
+  toast((which === "bore" ? "Ground Sump Pump" : "Overhead Tank Pump") + ` ON for ${mins} min`, "⏱");
 }
 
-function deleteSchedule(idx) {
-  schedules.splice(idx, 1);
-  mqttPublish(`${config.prefix}/schedule/del`, JSON.stringify({ slot: idx + 1 }));
-  renderScheduleList();
-  toast("Schedule removed", "🗑");
+function cancelPumpTimer() {
+  const which = document.getElementById("timerPump").value;
+  mqttPublish(`${config.prefix}/pump/timer`, JSON.stringify({ pump: which, mins: 0 }));
+  toast((which === "bore" ? "Ground Sump Pump" : "Overhead Tank Pump") + " timer cancelled", "⏹");
 }
 
 /* ── SETTINGS MODALS ── */
