@@ -244,17 +244,6 @@ body {
   font-family: 'Orbitron', sans-serif; font-size: 13px; font-weight: 700;
   letter-spacing: 1px; color: var(--cyan); display: flex; align-items: center; gap: 8px;
 }
-.fault-banner {
-  display: none; align-items: center; justify-content: space-between;
-  padding: 10px 14px; margin-bottom: 14px;
-  background: var(--crimson-bg); border: 1.5px solid var(--crimson);
-  border-radius: var(--radius-md); color: #fff; font-size: 12px;
-}
-.fault-btn {
-  background: var(--crimson); color: #fff; border: none; padding: 4px 10px;
-  border-radius: 6px; font-size: 11px; font-weight: 700; cursor: pointer;
-}
-
 .tanks-grid {
   display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
   gap: 16px; margin-bottom: 16px;
@@ -275,7 +264,7 @@ body {
 .tank-water {
   position: absolute; bottom: 0; left: 0; right: 0;
   background: linear-gradient(180deg, rgba(56, 189, 248, 0.8), rgba(2, 132, 199, 0.95));
-  height: 20%; transition: height 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+  height: 20%; transition: height 0.3s ease-out;
   box-shadow: 0 0 15px var(--water);
 }
 .tank-water::after {
@@ -324,7 +313,6 @@ body {
 }
 .pump-state-badge.active { background: var(--emerald-bg); color: var(--emerald); border: 1px solid var(--emerald); }
 .pump-state-badge.idle { background: rgba(51, 65, 85, 0.5); color: #94a3b8; }
-.pump-state-badge.fault { background: var(--crimson-bg); color: var(--crimson); border: 1px solid var(--crimson); }
 
 .pump-modes {
   display: flex; gap: 4px; margin-bottom: 12px; background: #0b111e;
@@ -343,7 +331,10 @@ body {
 }
 .pump-telemetry b { color: var(--text-muted); font-family: 'Orbitron', monospace; font-size: 10px; }
 
-/* ── APPLIANCE GRID (9 RELAYS) ── */
+/* ── PUMP CONTROLLERS ── */
+.main-cols {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: start;
+}
 .section-title {
   font-family: 'Orbitron', sans-serif; font-size: 13px; font-weight: 700;
   letter-spacing: 1.5px; color: var(--text-muted); text-transform: uppercase;
@@ -352,6 +343,29 @@ body {
 .app-grid {
   display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
   gap: 12px;
+}
+
+/* ── MOBILE RESPONSIVE ── */
+@media (max-width: 900px) {
+  .main-cols { grid-template-columns: 1fr; }
+}
+@media (max-width: 640px) {
+  .navbar { padding: 10px 12px; flex-wrap: wrap; gap: 8px; }
+  .nav-titles h1 { font-size: 12px; }
+  .nav-titles p { font-size: 9px; }
+  .nav-badges { gap: 5px; }
+  .badge { padding: 4px 7px; font-size: 10px; }
+  .container { padding: 12px 10px 32px; gap: 14px; }
+  .quick-strip { gap: 8px; }
+  .action-btn { min-width: 100%; }
+  .infra-card { padding: 14px 12px; }
+  .tanks-grid { grid-template-columns: 1fr; gap: 12px; }
+  .tank-visual { width: 56px; height: 88px; }
+  .pumps-grid { grid-template-columns: 1fr; }
+  .app-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+  .app-card { min-height: 112px; padding: 11px; }
+  .app-name { font-size: 12px; }
+  .section-title { font-size: 11px; }
 }
 .app-card {
   background: rgba(18, 24, 38, 0.7);
@@ -607,6 +621,7 @@ body {
       <button class="action-btn btn-sch" onclick="openScheduleModal()">⏰ SCHEDULE MANAGER</button>
     </div>
 
+    <div class="main-cols">
     <!-- Dual Tank & Pump Infrastructure -->
     <section class="infra-card">
       <div class="infra-head">
@@ -616,44 +631,32 @@ body {
         <button class="btn-icon" onclick="openPumpSettingsModal()">⚙ Limits</button>
       </div>
 
-      <!-- Fault Alert Bar -->
-      <div class="fault-banner" id="faultAlert">
-        <span id="faultText">⚠ Pump system fault detected!</span>
-        <button class="fault-btn" onclick="resetPumpFault()">RESET FAULT</button>
-      </div>
-
-      <!-- Tanks Visualizer -->
+      <!-- Water-Level Signal Visualizer -->
       <div class="tanks-grid">
-        <!-- Overhead Tank -->
         <div class="tank-box">
           <div class="tank-visual">
-            <div class="float-marker high" id="tankHighMarker">H</div>
-            <div class="float-marker low" id="tankLowMarker">L</div>
+            <div class="float-marker high" id="tankSignalMarker">SIG</div>
             <div class="tank-water" id="tankWaterLevel"></div>
           </div>
           <div class="tank-info">
             <div class="tank-name">Overhead Tank</div>
-            <div class="tank-status" id="tankStatusText">MID LEVEL</div>
+            <div class="tank-status" id="tankStatusText">HIGH</div>
             <div class="sensor-chips">
-              <div class="sensor-row"><span>High Float (GPIO 33):</span> <span id="lblTankHigh">DRY</span></div>
-              <div class="sensor-row"><span>Low Float (GPIO 32):</span> <span id="lblTankLow">DRY</span></div>
+              <div class="sensor-row"><span>Water Level Signal (GPIO 32):</span> <span id="lblTankSignal">HIGH</span></div>
             </div>
           </div>
         </div>
 
-        <!-- Sump Tank -->
         <div class="tank-box">
           <div class="tank-visual">
-            <div class="float-marker high" id="sumpHighMarker">H</div>
-            <div class="float-marker low" id="sumpLowMarker">L</div>
+            <div class="float-marker high" id="sumpSignalMarker">SIG</div>
             <div class="tank-water" id="sumpWaterLevel"></div>
           </div>
           <div class="tank-info">
             <div class="tank-name">Ground Sump</div>
-            <div class="tank-status" id="sumpStatusText">MID LEVEL</div>
+            <div class="tank-status" id="sumpStatusText">HIGH</div>
             <div class="sensor-chips">
-              <div class="sensor-row"><span>High Float (GPIO 26):</span> <span id="lblSumpHigh">DRY</span></div>
-              <div class="sensor-row"><span>Low Float (GPIO 25):</span> <span id="lblSumpLow">DRY</span></div>
+              <div class="sensor-row"><span>Water Level Signal (GPIO 25):</span> <span id="lblSumpSignal">HIGH</span></div>
             </div>
           </div>
         </div>
@@ -698,8 +701,11 @@ body {
     </section>
 
     <!-- 9 Smart Appliance Cards -->
-    <div class="section-title">ALL APPLIANCES &amp; LOADS</div>
-    <div class="app-grid" id="appGrid"></div>
+    <div>
+      <div class="section-title">ALL APPLIANCES &amp; LOADS</div>
+      <div class="app-grid" id="appGrid"></div>
+    </div>
+    </div>
   </main>
 </div>
 
@@ -888,8 +894,8 @@ body {
 <script>
 /* ── APPLIANCE DEFINITIONS (9 RELAYS) ── */
 const APPS = [
-  { id: 1, name: "SUMP PUMP",      desc: "Water Transfer Pump",  icon: "💧", isPump: true },
-  { id: 2, name: "BOREWELL",       desc: "Groundwater Source",   icon: "🌊", isPump: true },
+  { id: 1, name: "BOREWELL",       desc: "Groundwater Source",   icon: "🌊", isPump: true },
+  { id: 2, name: "SUMP PUMP",      desc: "Water Transfer Pump",  icon: "💧", isPump: true },
   { id: 3, name: "GARAGE DOOR",    desc: "1s Trigger Pulse",     icon: "🚗", isGarage: true },
   { id: 4, name: "SPRINKLER",      desc: "Lawn & Garden",        icon: "🌧" },
   { id: 5, name: "PORCH LIGHT",    desc: "Front Entry Light",    icon: "💡", isLight: true },
@@ -902,10 +908,10 @@ const APPS = [
 /* ── RUNTIME STATE ── */
 let relayStates = Array(9).fill(false);
 let pumpState = {
-  tankLow: false, tankHigh: false, sumpLow: false, sumpHigh: false,
+  tankSignalHigh: true, sumpSignalHigh: true,
   boreOn: false, sumpOn: false, boreMode: "auto", sumpMode: "auto",
   boreRunS: 0, sumpRunS: 0, minOnBoreS: 45, maxRunBoreS: 3600,
-  minOnSumpS: 30, maxRunSumpS: 2400, fault: ""
+  minOnSumpS: 30, maxRunSumpS: 2400
 };
 let schedules = [];
 let mqttClient = null;
@@ -1027,10 +1033,10 @@ function triggerAppliance(id) {
   relayStates[id - 1] = newState;
   updateAppCard(id);
 
-  if (a.id === 1) { // Sump pump
-    setPumpMode("sump", newState ? "on" : "off");
-  } else if (a.id === 2) { // Borewell
+  if (a.id === 1) { // Borewell
     setPumpMode("bore", newState ? "on" : "off");
+  } else if (a.id === 2) { // Sump pump
+    setPumpMode("sump", newState ? "on" : "off");
   } else {
     mqttPublish(`${config.prefix}/relay/${id}/cmd`, newState ? "ON" : "OFF");
   }
@@ -1049,23 +1055,18 @@ function masterLights(state) {
 
 /* ── DUAL PUMP & TANK LOGIC ── */
 function updatePumpUI() {
-  // Tank Water visual level
-  const tankLvl = pumpState.tankHigh ? 95 : (pumpState.tankLow ? 50 : 15);
-  document.getElementById("tankWaterLevel").style.height = tankLvl + "%";
-  document.getElementById("tankHighMarker").className = "float-marker high " + (pumpState.tankHigh ? "wet" : "dry");
-  document.getElementById("tankLowMarker").className = "float-marker low " + (pumpState.tankLow ? "wet" : "dry");
-  document.getElementById("lblTankHigh").textContent = pumpState.tankHigh ? "WET (FULL)" : "DRY";
-  document.getElementById("lblTankLow").textContent = pumpState.tankLow ? "WET" : "DRY (EMPTY)";
-  document.getElementById("tankStatusText").textContent = pumpState.tankHigh ? "TANK FULL" : (pumpState.tankLow ? "NORMAL LEVEL" : "LOW LEVEL");
+  // Each tank exposes one raw GPIO signal only.
+  const tankSignal = pumpState.tankSignalHigh ? "HIGH" : "LOW";
+  document.getElementById("tankWaterLevel").style.height = (pumpState.tankSignalHigh ? 15 : 95) + "%";
+  document.getElementById("tankSignalMarker").className = "float-marker high " + (pumpState.tankSignalHigh ? "dry" : "wet");
+  document.getElementById("lblTankSignal").textContent = tankSignal;
+  document.getElementById("tankStatusText").textContent = tankSignal;
 
-  // Sump Water visual level
-  const sumpLvl = pumpState.sumpHigh ? 95 : (pumpState.sumpLow ? 50 : 15);
-  document.getElementById("sumpWaterLevel").style.height = sumpLvl + "%";
-  document.getElementById("sumpHighMarker").className = "float-marker high " + (pumpState.sumpHigh ? "wet" : "dry");
-  document.getElementById("sumpLowMarker").className = "float-marker low " + (pumpState.sumpLow ? "wet" : "dry");
-  document.getElementById("lblSumpHigh").textContent = pumpState.sumpHigh ? "WET (FULL)" : "DRY";
-  document.getElementById("lblSumpLow").textContent = pumpState.sumpLow ? "WET" : "DRY (EMPTY)";
-  document.getElementById("sumpStatusText").textContent = pumpState.sumpHigh ? "SUMP FULL" : (pumpState.sumpLow ? "NORMAL LEVEL" : "LOW - DRY RUN PROTECT");
+  const sumpSignal = pumpState.sumpSignalHigh ? "HIGH" : "LOW";
+  document.getElementById("sumpWaterLevel").style.height = (pumpState.sumpSignalHigh ? 15 : 95) + "%";
+  document.getElementById("sumpSignalMarker").className = "float-marker high " + (pumpState.sumpSignalHigh ? "dry" : "wet");
+  document.getElementById("lblSumpSignal").textContent = sumpSignal;
+  document.getElementById("sumpStatusText").textContent = sumpSignal;
 
   // Borewell Pump card
   const bBadge = document.getElementById("boreBadge");
@@ -1085,9 +1086,6 @@ function updatePumpUI() {
   if (pumpState.sumpOn) {
     sBadge.className = "pump-state-badge active";
     sBadge.textContent = "PUMPING NOW";
-  } else if (!pumpState.sumpLow && pumpState.sumpMode === "auto") {
-    sBadge.className = "pump-state-badge fault";
-    sBadge.textContent = "DRY RUN BLOCKED";
   } else {
     sBadge.className = "pump-state-badge idle";
     sBadge.textContent = "STANDBY";
@@ -1096,14 +1094,6 @@ function updatePumpUI() {
   document.getElementById("sumpMaxTime").textContent = Math.round(pumpState.maxRunSumpS / 60) + "m";
   updateModeButtons("sump", pumpState.sumpMode);
 
-  // Fault Banner
-  const fb = document.getElementById("faultAlert");
-  if (pumpState.fault && pumpState.fault.length > 0) {
-    fb.style.display = "flex";
-    document.getElementById("faultText").textContent = "⚠ FAULT: " + pumpState.fault;
-  } else {
-    fb.style.display = "none";
-  }
 }
 
 function updateModeButtons(pump, mode) {
@@ -1126,13 +1116,6 @@ function setPumpMode(pump, mode) {
   if (pump === "sump") pumpState.sumpMode = mode;
   updatePumpUI();
   toast(`${pump.toUpperCase()} Mode → ${mode.toUpperCase()}`, "⚙");
-}
-
-function resetPumpFault() {
-  mqttPublish(`${config.prefix}/pump/fault/reset`, "RESET");
-  pumpState.fault = "";
-  updatePumpUI();
-  toast("Fault cleared", "✅");
 }
 
 /* ── MQTT WEBSOCKET CONNECTION ── */
@@ -1189,8 +1172,8 @@ function connectMQTT() {
       try {
         const d = JSON.parse(text);
         Object.assign(pumpState, d);
-        relayStates[0] = pumpState.sumpOn;
-        relayStates[1] = pumpState.boreOn;
+        relayStates[0] = pumpState.boreOn;
+        relayStates[1] = pumpState.sumpOn;
         updateAppCard(1);
         updateAppCard(2);
         updatePumpUI();
