@@ -726,9 +726,11 @@ body {
       </div>
       <div class="form-group">
         <label>⏱ Run Duration (minutes) — scroll to set</label>
-        <!-- iOS-style drum-roll minute picker -->
+        <!-- iOS-style drum-roll duration picker: hours + minutes -->
         <div class="drum-picker-wrap">
           <div class="drum-picker-highlight"></div>
+          <div class="drum-col" id="drumHour"></div>
+          <div class="drum-sep">h</div>
           <div class="drum-col" id="drumMin"></div>
         </div>
         <div style="text-align:center;font-size:11px;color:var(--text-dim);margin-top:6px;">
@@ -1237,50 +1239,69 @@ async function startSpeedTest() {
   }
 }
 
-/* ── DRUM-ROLL MINUTE PICKER (pump timer) ── */
+/* ── DRUM-ROLL DURATION PICKER (hours + minutes) ── */
 let drumReady = false;
-function initDrumPicker(m = 15) {
-  const minCol = document.getElementById("drumMin");
-  minCol.innerHTML = "";
-  for (let i = 0; i <= 720; i++) {
+const DRUM_MAX_H = 99;
+function initDrumPicker(h = 0, m = 15) {
+  const hourCol = document.getElementById("drumHour");
+  const minCol  = document.getElementById("drumMin");
+  hourCol.innerHTML = "";
+  minCol.innerHTML  = "";
+  for (let i = 0; i <= DRUM_MAX_H; i++) {
     const el = document.createElement("div");
     el.className = "drum-item";
-    el.textContent = i + " min";
+    el.textContent = String(i);
+    el.dataset.val = i;
+    hourCol.appendChild(el);
+  }
+  for (let i = 0; i < 60; i++) {
+    const el = document.createElement("div");
+    el.className = "drum-item";
+    el.textContent = String(i).padStart(2, "0");
     el.dataset.val = i;
     minCol.appendChild(el);
   }
-  minCol.scrollTop = m * 42;
+  hourCol.scrollTop = h * 42;
+  minCol.scrollTop  = m * 42;
   updateDrumDisplay();
 
-  minCol.addEventListener("scroll", () => {
-    clearTimeout(minCol._snapTimer);
-    minCol._snapTimer = setTimeout(() => {
-      const idx = Math.max(0, Math.min(720, Math.round(minCol.scrollTop / 42)));
-      minCol.scrollTop = idx * 42;
-      updateDrumDisplay();
-    }, 120);
-  });
-  minCol.addEventListener("click", e => {
-    if (e.target.classList.contains("drum-item")) {
-      const v = parseInt(e.target.dataset.val);
-      minCol.scrollTo({ top: v * 42, behavior: "smooth" });
-    }
-  });
+  function bindWheel(col, max) {
+    col.addEventListener("scroll", () => {
+      clearTimeout(col._snapTimer);
+      col._snapTimer = setTimeout(() => {
+        const idx = Math.max(0, Math.min(max, Math.round(col.scrollTop / 42)));
+        col.scrollTop = idx * 42;
+        updateDrumDisplay();
+      }, 120);
+    });
+    col.addEventListener("click", e => {
+      if (e.target.classList.contains("drum-item")) {
+        col.scrollTo({ top: parseInt(e.target.dataset.val) * 42, behavior: "smooth" });
+      }
+    });
+  }
+  bindWheel(hourCol, DRUM_MAX_H);
+  bindWheel(minCol, 59);
 
   drumReady = true;
 }
 
 function updateDrumDisplay() {
-  const minCol = document.getElementById("drumMin");
-  if (!minCol) return;
-  const m = Math.max(0, Math.min(720, Math.round(minCol.scrollTop / 42)));
-  document.getElementById("drumTimeDisplay").textContent = m + " min";
-  minCol.querySelectorAll(".drum-item").forEach((el, i) => el.classList.toggle("selected", i === m));
+  const hourCol = document.getElementById("drumHour");
+  const minCol  = document.getElementById("drumMin");
+  if (!hourCol || !minCol) return;
+  const h = Math.max(0, Math.min(DRUM_MAX_H, Math.round(hourCol.scrollTop / 42)));
+  const m = Math.max(0, Math.min(59, Math.round(minCol.scrollTop / 42)));
+  const total = h * 60 + m;
+  document.getElementById("drumTimeDisplay").textContent =
+    total === 0 ? "0 min" : (h > 0 ? `${h} h ${String(m).padStart(2,"0")} min` : `${m} min`);
+  hourCol.querySelectorAll(".drum-item").forEach((el, i) => el.classList.toggle("selected", i === h));
+  minCol .querySelectorAll(".drum-item").forEach((el, i) => el.classList.toggle("selected", i === m));
 }
 
 function openScheduleModal() {
   document.getElementById("schModal").classList.add("open");
-  if (!drumReady) setTimeout(() => initDrumPicker(15), 60);
+  if (!drumReady) setTimeout(() => initDrumPicker(0, 15), 60);
   updatePumpUI();
 }
 function closeScheduleModal() {
@@ -1288,8 +1309,12 @@ function closeScheduleModal() {
 }
 
 function startPumpTimerUI() {
+  const hourCol = document.getElementById("drumHour");
+  const minCol  = document.getElementById("drumMin");
   updateDrumDisplay();
-  const mins = Math.max(0, Math.min(720, Math.round(document.getElementById("drumMin").scrollTop / 42)));
+  const h = Math.max(0, Math.min(DRUM_MAX_H, Math.round(hourCol.scrollTop / 42)));
+  const m = Math.max(0, Math.min(59, Math.round(minCol.scrollTop / 42)));
+  const mins = h * 60 + m;
   if (mins <= 0) { toast("Scroll to pick a duration above 0", "⚠"); return; }
   const which = document.getElementById("timerPump").value;
   mqttPublish(`${config.prefix}/pump/timer`, JSON.stringify({ pump: which, mins }));
