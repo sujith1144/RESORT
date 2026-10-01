@@ -1398,4 +1398,80 @@ function testTelegramToken() {
   if (tok.length < 10) { toast("Enter a valid bot token first", "⚠"); return; }
   mqttPublish(`${config.prefix}/admin/tg-token`, tok);
   setTimeout(() => mqttPublish(`${config.prefix}/admin/tg-test`, "ping"), 400);
-  toast("Test message sent
+  toast("Test message sent via MQTT — check Telegram!", "📡");
+}
+
+function saveSettings() {
+  config.broker = document.getElementById("cfgBroker").value.trim() || "broker.emqx.io";
+  config.port = parseInt(document.getElementById("cfgPort").value) || 8084;
+  config.prefix = document.getElementById("cfgPrefix").value.trim() || "ZYREX_SMART_VILLA";
+  config.user = document.getElementById("cfgUser").value.trim();
+  config.pass = document.getElementById("cfgPass").value.trim();
+
+  localStorage.setItem("mh_broker", config.broker);
+  localStorage.setItem("mh_port", config.port);
+  localStorage.setItem("mh_prefix", config.prefix);
+  localStorage.setItem("mh_user", config.user);
+  localStorage.setItem("mh_pass", config.pass);
+
+  // Save & publish Telegram bot token
+  const tok = document.getElementById("cfgBotToken").value.trim();
+  if (tok.length >= 10) {
+    localStorage.setItem("mh_bot_token", tok);
+    mqttPublish(`${config.prefix}/admin/tg-token`, tok);
+  }
+
+  // Save & publish chat IDs (one per line)
+  const rawIds = document.getElementById("cfgChatIds").value
+    .split("\n").map(s => s.trim()).filter(s => s.length > 0);
+  for (let i = 0; i < 10; i++) {
+    if (i < rawIds.length) {
+      localStorage.setItem(`mh_chat_${i}`, rawIds[i]);
+      mqttPublish(`${config.prefix}/admin/adduser`, rawIds[i]);
+    } else {
+      localStorage.removeItem(`mh_chat_${i}`);
+    }
+  }
+
+  closeSettingsModal();
+  connectMQTT();
+  toast(`Settings saved${tok.length >= 10 ? " + Telegram config sent" : ""}`, "⚙");
+}
+
+/* ── TELEGRAM ADMIN MODAL ── */
+document.getElementById("openTgAdminBtn").addEventListener("click", () => {
+  document.getElementById("tgAdminModal").classList.add("open");
+});
+function closeTgAdminModal() { document.getElementById("tgAdminModal").classList.remove("open"); }
+
+function addTelegramUser() {
+  const id = document.getElementById("newTgChatId").value.trim();
+  if (!id) { toast("Please enter a valid chat ID", "⚠"); return; }
+  mqttPublish(`${config.prefix}/admin/adduser`, id);
+  document.getElementById("newTgChatId").value = "";
+  closeTgAdminModal();
+  toast(`User ${id} authorized via MQTT`, "👥");
+}
+
+/* ── LOGOUT ── */
+document.getElementById("logoutBtn").addEventListener("click", () => {
+  sessionStorage.removeItem("mh_auth");
+  if (mqttClient) mqttClient.end(true);
+  if (hbChecker) clearInterval(hbChecker);
+  document.getElementById("appView").style.display = "none";
+  document.getElementById("loginView").style.display = "flex";
+  document.getElementById("pwInput").value = "";
+});
+
+/* ── TOAST NOTIFIER ── */
+function toast(msg, icon = "ℹ") {
+  const c = document.getElementById("toastContainer");
+  const el = document.createElement("div");
+  el.className = "toast";
+  el.innerHTML = `<span>${icon}</span> <span>${msg}</span>`;
+  c.appendChild(el);
+  setTimeout(() => el.remove(), 2800);
+}
+</script>
+</body>
+</html>
