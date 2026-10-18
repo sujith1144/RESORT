@@ -611,6 +611,7 @@ body {
     </div>
     <button class="login-btn" id="loginSubmit">AUTHENTICATE</button>
     <div class="login-err" id="loginErr">⛔ Access Denied: Invalid Security Key</div>
+    <div id="loginNote" style="margin-top:10px;font-size:10px;line-height:1.6;color:var(--text-dim);text-align:center;"></div>
   </div>
 </div>
 
@@ -627,6 +628,9 @@ body {
     <div class="nav-badges">
       <div class="badge" title="Ping / Speed">
         <span>📶</span> <span id="netSpeed" style="font-family:'Orbitron',monospace;color:var(--cyan)">--</span> <span style="font-size:9px">Mbps</span>
+      </div>
+      <div class="badge" id="clockBadge" title="ESP32 internal clock — schedules only fire when this is synced">
+        <span>🕒</span> <span id="clockText" style="font-family:'Orbitron',monospace;color:var(--text-muted)">--:--</span>
       </div>
       <div class="badge" id="espBadge" title="ESP32 Telemetry Status">
         <div class="badge-dot pulse" id="espDot"></div>
@@ -758,7 +762,9 @@ body {
       </div>
       <div class="form-group">
         <label>Topic Prefix</label>
-        <input type="text" id="cfgPrefix" placeholder="ZYREX_SMART_VILLA">
+        <input type="text" id="cfgPrefix" placeholder="ZYREX_VILLA_xxxxxx">
+        <small style="font-size:10px;color:var(--text-dim)">Must match the device exactly. It is printed in the
+          Serial Monitor at boot and shown on the Wi-Fi setup portal (each board derives its own from its chip MAC).</small>
       </div>
       <div class="form-group">
         <label>Username (Optional)</label>
@@ -767,6 +773,25 @@ body {
       <div class="form-group">
         <label>Password (Optional)</label>
         <input type="password" id="cfgPass" placeholder="leave blank if none">
+      </div>
+
+      <hr style="border:none;border-top:1px solid var(--border);margin:14px 0 10px;">
+      <div style="font-size:12px;font-weight:700;color:var(--cyan);letter-spacing:.5px;margin-bottom:10px;">🔐 DEVICE LOGIN &amp; IDENTITY</div>
+      <div id="devInfoLine" style="font-size:10px;line-height:1.8;color:var(--text-dim);background:var(--glass);
+        border:1px solid var(--border);border-radius:8px;padding:8px 10px;margin-bottom:12px;">
+        ⚠ No device report yet
+      </div>
+      <div class="form-group">
+        <label>Change Device Passcode <span style="font-size:10px;color:var(--text-dim)">(new one: min 6 characters)</span></label>
+        <div style="display:flex;gap:6px;align-items:center;">
+          <input type="password" id="cfgCurPass" placeholder="current" style="flex:1;min-width:0;" autocomplete="off">
+          <input type="password" id="cfgNewPass" placeholder="new" style="flex:1;min-width:0;" autocomplete="new-password">
+          <button onclick="changeDevicePass()" style="background:var(--glass);border:1px solid var(--cyan);
+            border-radius:8px;padding:7px 12px;cursor:pointer;font-size:11px;font-weight:700;color:var(--cyan);
+            white-space:nowrap;">SET</button>
+        </div>
+        <small style="font-size:10px;color:var(--text-dim);">Only hashes are sent over MQTT — the passcode itself never
+          leaves this browser. The device confirms the change on Telegram. Serial command <code>p</code> resets it if you get locked out.</small>
       </div>
 
       <hr style="border:none;border-top:1px solid var(--border);margin:14px 0 10px;">
@@ -862,6 +887,12 @@ body {
         <label>Appliance</label>
         <select id="asAppliance"></select>
       </div>
+      <div id="asTimeWarn" style="display:none;background:rgba(239,68,68,.12);border:1px solid #ef4444;
+        border-radius:8px;padding:8px 10px;margin-bottom:10px;font-size:11px;line-height:1.55;color:#fca5a5;">
+        ⚠ <b>The ESP32 clock is not synced.</b> Schedules are saved on the device but will not fire until it
+        reaches NTP (needs Wi-Fi + internet). The 🕒 badge in the top bar turns green once they are live.
+      </div>
+      <div id="asClock" style="font-size:10px;color:var(--text-dim);margin:0 0 10px;">Device time: unknown</div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
         <div class="form-group">
           <label>Repeat</label>
@@ -967,12 +998,47 @@ let schedules = [];
 let tgUsers = [];
 let tgBotSet = false;
 let espOfflineFlag = false;
+let deviceInfo = {};   // last "<prefix>/device/info" report: fw, clock, heap, rssi, ip, prefix, ota
+
+/* Batch 4: the device clock is the only thing that can fire a schedule, so surface it
+   everywhere instead of letting schedules silently never run. */
+function renderDeviceInfo() {
+  const synced = !!deviceInfo.timeSynced;
+  const clk = document.getElementById("clockText");
+  const bdg = document.getElementById("clockBadge");
+  if (clk) {
+    clk.textContent = (synced && deviceInfo.localTime) ? String(deviceInfo.localTime).slice(11, 16) : "--:--";
+    clk.style.color = synced ? "#10b981" : "#ef4444";
+  }
+  if (bdg) {
+    bdg.title = synced
+      ? `Device clock synced · fw v${deviceInfo.fw || "?"} · ${deviceInfo.ip || "?"} · heap ${Math.round((deviceInfo.freeHeap || 0) / 1024)}K · rssi ${deviceInfo.rssi || "?"}dBm`
+      : "Device clock NOT synced (NTP not reached) — schedules will not fire";
+  }
+  const warn = document.getElementById("asTimeWarn");
+  if (warn) warn.style.display = synced ? "none" : "block";
+  const asClk = document.getElementById("asClock");
+  if (asClk) asClk.textContent = synced ? `Device time: ${deviceInfo.localTime}` : "Device clock not set yet";
+  const dev = document.getElementById("devInfoLine");
+  if (dev) {
+    dev.innerHTML = deviceInfo.fw
+      ? `✅ Device reporting · fw <b>v${deviceInfo.fw}</b> · IP <b>${deviceInfo.ip || "?"}</b> · prefix <b>${deviceInfo.prefix || config.prefix}</b> · OTA <b>${deviceInfo.otaReady ? "ready" : "off"}</b> · clock <b>${synced ? deviceInfo.localTime : "NOT SYNCED"}</b>`
+      : `⚠ No device report yet on prefix <b>${config.prefix}</b>`;
+  }
+}
 
 // Settings
+const DEFAULT_PREFIX = "ZYREX_VILLA_FE8CE0";
+function savedPrefix() {
+  const p = localStorage.getItem("mh_prefix");
+  // Pre-v26 builds used one hard-coded topic for every board; those stale values
+  // would silently subscribe to a topic this chip never publishes on.
+  return (!p || p === "ZYREX_SMART_VILLA") ? DEFAULT_PREFIX : p;
+}
 let config = {
   broker: localStorage.getItem("mh_broker") || "broker.emqx.io",
   port: parseInt(localStorage.getItem("mh_port")) || 8084,
-  prefix: localStorage.getItem("mh_prefix") || "ZYREX_SMART_VILLA",
+  prefix: savedPrefix(),
   user: localStorage.getItem("mh_user") || "",
   pass: localStorage.getItem("mh_pass") || ""
 };
@@ -1040,22 +1106,105 @@ async function sha256(str) {
   return sha256Fallback(str);
 }
 const DEFAULT_PASS_HASH = "8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2ab448a918"; // admin123
+let authMode = "local";      // "device" = the ESP32 verified the key, "local" = offline fallback
+
+function mqttUrl() {
+  let p = config.port;
+  if (p === 1883) p = config.broker.includes("emqx") ? 8084 : 8884;
+  let proto = (p === 8884 || p === 8084) ? "wss" : "ws";
+  if (location.protocol === "https:" && proto === "ws") proto = "wss";
+  return `${proto}://${config.broker}:${p}/mqtt`;
+}
+
+/* Ask the ESP32 itself to verify the key: we send sha256(sha256(pass)+nonce) and the
+   device compares it against its own stored verifier. The passcode never leaves the
+   browser, and the nonce makes the exchange unusable if replayed. */
+function askDevice(nonce, hash) {
+  return new Promise(resolve => {
+    let settled = false, c = null;
+    const finish = r => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      try { if (c) c.end(true); } catch (e) {}
+      resolve(r);
+    };
+    const timer = setTimeout(() => finish({ ok: false, reason: "device did not answer" }), 7000);
+    try {
+      c = mqtt.connect(mqttUrl(), {
+        clientId: "zyrex_auth_" + Math.random().toString(36).slice(2, 9),
+        clean: true, reconnectPeriod: 0, connectTimeout: 5000
+      });
+    } catch (e) { return finish({ ok: false, reason: "broker error" }); }
+
+    const px = config.prefix;
+    c.on("connect", () => {
+      c.subscribe([`${px}/admin/auth/ok`, `${px}/admin/auth/fail`], () => {
+        c.publish(`${px}/admin/auth`, JSON.stringify({ nonce, hash }));
+      });
+    });
+    c.on("message", (topic, msg) => {
+      let got = msg.toString().trim();
+      try { const d = JSON.parse(got); if (d && d.nonce) got = d.nonce; } catch (e) {}
+      if (got !== nonce) return;                       // someone else's challenge
+      if (topic.endsWith("/admin/auth/ok")) finish({ ok: true });
+      else if (topic.endsWith("/admin/auth/fail")) finish({ ok: false, reason: "rejected" });
+    });
+    c.on("error", () => finish({ ok: false, reason: "broker unreachable" }));
+  });
+}
+
+function unlock() {
+  sessionStorage.setItem("mh_auth", "1");
+  initDashboard();
+}
 
 async function checkLogin() {
   const val = document.getElementById("pwInput").value;
   if (!val) return;
-  let ok = false;
-  try {
-    const hash = await sha256(val);
-    ok = (hash === DEFAULT_PASS_HASH || val === "admin123" || val === "OM");
-  } catch (e) { console.error("Login error:", e); }
-  if (ok) {
-    sessionStorage.setItem("mh_auth", "1");
-    initDashboard();
-  } else {
-    const err = document.getElementById("loginErr");
+  const err = document.getElementById("loginErr");
+  const note = document.getElementById("loginNote");
+  const btn = document.getElementById("loginSubmit");
+  err.style.display = "none";
+  btn.disabled = true;
+  btn.textContent = "VERIFYING…";
+  note.style.color = "var(--text-dim)";
+  note.textContent = `🔐 Challenging ${config.prefix} on ${config.broker}…`;
+
+  const nonce = Math.random().toString(36).slice(2) + Date.now().toString(36);
+  let hash = "";
+  try { hash = await sha256((await sha256(val)) + nonce); } catch (e) { hash = ""; }
+
+  const verdict = hash ? await askDevice(nonce, hash) : { ok: false, reason: "crypto unavailable" };
+  btn.disabled = false;
+  btn.textContent = "AUTHENTICATE";
+
+  if (verdict.ok) {
+    authMode = "device";
+    note.textContent = "";
+    unlock();
+    return;
+  }
+  if (verdict.reason === "rejected") {
+    err.textContent = "⛔ Device rejected that security key";
     err.style.display = "block";
-    setTimeout(() => err.style.display = "none", 3500);
+    note.textContent = "";
+    return;
+  }
+  // Device unreachable (unplugged, wrong prefix, broker down). Fall back to the local
+  // check so the panel is still readable, but say so loudly instead of pretending.
+  let local = false;
+  try { local = (await sha256(val)) === DEFAULT_PASS_HASH || val === "OM"; } catch (e) { local = false; }
+  if (local) {
+    authMode = "local";
+    note.style.color = "#f59e0b";
+    note.textContent = `⚠ ${verdict.reason} — opened in OFFLINE mode. Controls will queue but not reach the house. Check the topic prefix in Settings after connecting.`;
+    unlock();
+  } else {
+    err.textContent = "⛔ Access Denied: Invalid Security Key";
+    err.style.display = "block";
+    note.textContent = `${verdict.reason} — and the key is not a known offline key.`;
+    setTimeout(() => { err.style.display = "none"; note.textContent = ""; }, 5000);
   }
 }
 
@@ -1078,6 +1227,10 @@ function initDashboard() {
   startSpeedTest();
   if (hbChecker) clearInterval(hbChecker);
   hbChecker = setInterval(updateHeartbeatStatus, 4000);
+  if (authMode !== "device") {
+    document.getElementById("mqttBadge").title = "OFFLINE MODE — the ESP32 did not verify your key";
+    toast("OFFLINE MODE — device did not verify the key", "⚠");
+  }
 }
 
 /* ── BUILD APPLIANCE CARDS ── */
@@ -1240,14 +1393,7 @@ function connectMQTT() {
   updateHeartbeatStatus();
 
   // Smart Port Mapping for WebSockets (bridge 1883 TCP -> 8884 WSS)
-  let p = config.port;
-  if (p === 1883) {
-    p = config.broker.includes("emqx") ? 8084 : 8884;
-  }
-  let proto = (p === 8884 || p === 8084) ? "wss" : "ws";
-  if (location.protocol === "https:" && proto === "ws") proto = "wss";
-
-  const url = `${proto}://${config.broker}:${p}/mqtt`;
+  const url = mqttUrl();
   const cid = "zyrex_home_" + Math.random().toString(36).substring(2, 9);
   const opts = { clientId: cid, clean: true, reconnectPeriod: 5000, connectTimeout: 12000 };
   if (config.user) { opts.username = config.user; opts.password = config.pass; }
@@ -1268,6 +1414,7 @@ function connectMQTT() {
     mqttClient.subscribe(`${px}/device/status`);
     mqttClient.subscribe(`${px}/schedules`);
     mqttClient.subscribe(`${px}/admin/users`);
+    mqttClient.subscribe(`${px}/device/info`);
 
     // Request full status refresh
     mqttClient.publish(`${px}/get`, "1");
@@ -1298,6 +1445,13 @@ function connectMQTT() {
         mqttClient.publish(`${px}/schedule/list`, "1");
       }
       updateHeartbeatStatus();
+      return;
+    }
+    if (topic === `${px}/device/info`) {
+      try {
+        deviceInfo = JSON.parse(text);
+        renderDeviceInfo();
+      } catch (e) { console.error("device/info error", e); }
       return;
     }
     if (topic === `${px}/schedules`) {
@@ -1575,8 +1729,10 @@ function openAutoScheduleModal(relayId) {
   if (relayId) document.getElementById("asAppliance").value = relayId;
   document.getElementById("autoSchedModal").classList.add("open");
   if (!asDrumReady) setTimeout(() => initScheduleDrum(7, 0), 60);
+  renderDeviceInfo();          // clock-sync warning reflects the latest device report
   renderScheduleList();
   refreshSchedules();
+  mqttPublish(`${config.prefix}/get`, "1");
 }
 
 function closeAutoScheduleModal() {
@@ -1647,8 +1803,32 @@ document.getElementById("openSettingsBtn").addEventListener("click", () => {
     if (v) ids.push(v);
   }
   document.getElementById("cfgChatIds").value = ids.join("\n");
+  document.getElementById("cfgCurPass").value = "";
+  document.getElementById("cfgNewPass").value = "";
+  renderDeviceInfo();
+  mqttPublish(`${config.prefix}/get`, "1");
   document.getElementById("settingsModal").classList.add("open");
 });
+
+/* Change the passcode stored on the ESP32: prove knowledge of the current one with
+   sha256(sha256(cur)+nonce) and ship only the new verifier sha256(new). */
+async function changeDevicePass() {
+  const cur = document.getElementById("cfgCurPass").value;
+  const np = document.getElementById("cfgNewPass").value;
+  if (!cur) { toast("Enter the current passcode", "⚠"); return; }
+  if (!np || np.length < 6) { toast("New passcode must be at least 6 characters", "⚠"); return; }
+  const nonce = Math.random().toString(36).slice(2) + Date.now().toString(36);
+  let hash = "", newHash = "";
+  try {
+    hash = await sha256((await sha256(cur)) + nonce);
+    newHash = await sha256(np);
+  } catch (e) { hash = ""; }
+  if (!hash || !newHash) { toast("Browser crypto unavailable", "⚠"); return; }
+  mqttPublish(`${config.prefix}/admin/pass`, JSON.stringify({ nonce, hash, newHash }));
+  document.getElementById("cfgCurPass").value = "";
+  document.getElementById("cfgNewPass").value = "";
+  toast("Passcode change sent — the device confirms on Telegram", "🔐");
+}
 function closeSettingsModal() { document.getElementById("settingsModal").classList.remove("open"); }
 
 function toggleTokenVis() {
@@ -1674,7 +1854,7 @@ function testTelegramToken() {
 function saveSettings() {
   config.broker = document.getElementById("cfgBroker").value.trim() || "broker.emqx.io";
   config.port = parseInt(document.getElementById("cfgPort").value) || 8084;
-  config.prefix = document.getElementById("cfgPrefix").value.trim() || "ZYREX_SMART_VILLA";
+  config.prefix = document.getElementById("cfgPrefix").value.trim() || "ZYREX_VILLA_FE8CE0";
   config.user = document.getElementById("cfgUser").value.trim();
   config.pass = document.getElementById("cfgPass").value.trim();
 
