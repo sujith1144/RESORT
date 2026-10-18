@@ -262,9 +262,9 @@ code, kbd { font-family: var(--mono); font-size: 0.92em; background: var(--glass
 .app-card:active { transform: translateY(1px); }
 .app-card::before {
   content: ""; position: absolute; left: 0; top: 14px; bottom: 14px; width: 3px; border-radius: 0 3px 3px 0;
-  background: transparent; transition: background 0.2s;
+  background: var(--crimson); transition: background 0.2s;
 }
-.app-card.is-on::before { background: var(--water); }
+.app-card.is-on::before { background: var(--emerald); }
 .app-card.is-on { border-color: rgba(96, 165, 250, 0.34); background: linear-gradient(180deg, rgba(37, 99, 235, 0.10), var(--surface) 62%); }
 .app-card-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
 .app-icon-wrap {
@@ -351,12 +351,14 @@ code, kbd { font-family: var(--mono); font-size: 0.92em; background: var(--glass
 }
 .drum-picker-highlight {
   position: absolute; left: 10px; right: 10px; top: 50%; transform: translateY(-50%); height: 34px; pointer-events: none;
-  border-radius: 8px; background: rgba(37, 99, 235, 0.16); border: 1px solid rgba(96, 165, 250, 0.32);
+  border-radius: 8px; background: rgba(255, 255, 255, 0.075); border: 1px solid rgba(255, 255, 255, 0.16);
 }
 .drum-col {
   position: relative; flex: 1; height: 128px; overflow-y: auto; scroll-snap-type: y mandatory; scrollbar-width: none;
+  overscroll-behavior: contain;
   -webkit-mask-image: linear-gradient(180deg, transparent, #000 26%, #000 74%, transparent);
 }
+.drum-col::before, .drum-col::after { content: ""; display: block; height: var(--drum-pad, 48px); }
 .drum-col::-webkit-scrollbar { display: none; }
 .drum-item {
   scroll-snap-align: center; height: 32px; display: grid; place-items: center; font-size: 14px; font-weight: 600;
@@ -676,8 +678,8 @@ code, kbd { font-family: var(--mono); font-size: 0.92em; background: var(--glass
       <div class="form-group">
         <label>Select Tank / Pump</label>
         <select id="timerPump">
-          <option value="sump">Overhead Tank Pump (Sump Pump)</option>
-          <option value="bore">Ground Sump Pump (Borewell Pump)</option>
+          <option value="sump">Overhead Tank Pump — Sump Pump · GPIO 19</option>
+          <option value="bore">Ground Sump Pump — Borewell Pump · GPIO 23</option>
         </select>
       </div>
       <div class="form-group">
@@ -1411,6 +1413,10 @@ async function startSpeedTest() {
 /* ── DRUM-ROLL DURATION PICKER (hours + minutes) ── */
 let drumReady = false;
 const DRUM_MAX_H = 99;
+const DRUM_PITCH = 32;  // must equal .drum-item height in CSS
+function drumPrepare(col) {
+  col.style.setProperty("--drum-pad", Math.max(0, (col.clientHeight - DRUM_PITCH) / 2) + "px");
+}
 function initDrumPicker(h = 0, m = 15) {
   const hourCol = document.getElementById("drumHour");
   const minCol  = document.getElementById("drumMin");
@@ -1430,22 +1436,23 @@ function initDrumPicker(h = 0, m = 15) {
     el.dataset.val = i;
     minCol.appendChild(el);
   }
-  hourCol.scrollTop = h * 42;
-  minCol.scrollTop  = m * 42;
+  drumPrepare(hourCol); drumPrepare(minCol);
+  hourCol.scrollTop = h * DRUM_PITCH;
+  minCol.scrollTop  = m * DRUM_PITCH;
   updateDrumDisplay();
 
   function bindWheel(col, max) {
     col.addEventListener("scroll", () => {
       clearTimeout(col._snapTimer);
       col._snapTimer = setTimeout(() => {
-        const idx = Math.max(0, Math.min(max, Math.round(col.scrollTop / 42)));
-        col.scrollTop = idx * 42;
+        const idx = Math.max(0, Math.min(max, Math.round(col.scrollTop / DRUM_PITCH)));
+        col.scrollTop = idx * DRUM_PITCH;
         updateDrumDisplay();
       }, 120);
     });
     col.addEventListener("click", e => {
       if (e.target.classList.contains("drum-item")) {
-        col.scrollTo({ top: parseInt(e.target.dataset.val) * 42, behavior: "smooth" });
+        col.scrollTo({ top: parseInt(e.target.dataset.val) * DRUM_PITCH, behavior: "smooth" });
       }
     });
   }
@@ -1459,8 +1466,8 @@ function updateDrumDisplay() {
   const hourCol = document.getElementById("drumHour");
   const minCol  = document.getElementById("drumMin");
   if (!hourCol || !minCol) return;
-  const h = Math.max(0, Math.min(DRUM_MAX_H, Math.round(hourCol.scrollTop / 42)));
-  const m = Math.max(0, Math.min(59, Math.round(minCol.scrollTop / 42)));
+  const h = Math.max(0, Math.min(DRUM_MAX_H, Math.round(hourCol.scrollTop / DRUM_PITCH)));
+  const m = Math.max(0, Math.min(59, Math.round(minCol.scrollTop / DRUM_PITCH)));
   const total = h * 60 + m;
   document.getElementById("drumTimeDisplay").textContent =
     total === 0 ? "0 min" : (h > 0 ? `${h} h ${String(m).padStart(2,"0")} min` : `${m} min`);
@@ -1481,8 +1488,8 @@ function startPumpTimerUI() {
   const hourCol = document.getElementById("drumHour");
   const minCol  = document.getElementById("drumMin");
   updateDrumDisplay();
-  const h = Math.max(0, Math.min(DRUM_MAX_H, Math.round(hourCol.scrollTop / 42)));
-  const m = Math.max(0, Math.min(59, Math.round(minCol.scrollTop / 42)));
+  const h = Math.max(0, Math.min(DRUM_MAX_H, Math.round(hourCol.scrollTop / DRUM_PITCH)));
+  const m = Math.max(0, Math.min(59, Math.round(minCol.scrollTop / DRUM_PITCH)));
   const mins = h * 60 + m;
   if (mins <= 0) { toast("Scroll to pick a duration above 0", "⚠"); return; }
   const which = document.getElementById("timerPump").value;
@@ -1518,22 +1525,23 @@ function initScheduleDrum(h = 7, m = 0) {
     el.dataset.val = i;
     minCol.appendChild(el);
   }
-  hourCol.scrollTop = h * 42;
-  minCol.scrollTop  = m * 42;
+  drumPrepare(hourCol); drumPrepare(minCol);
+  hourCol.scrollTop = h * DRUM_PITCH;
+  minCol.scrollTop  = m * DRUM_PITCH;
   updateScheduleDrumDisplay();
 
   function bindWheel(col, max) {
     col.addEventListener("scroll", () => {
       clearTimeout(col._snapTimer);
       col._snapTimer = setTimeout(() => {
-        const idx = Math.max(0, Math.min(max, Math.round(col.scrollTop / 42)));
-        col.scrollTop = idx * 42;
+        const idx = Math.max(0, Math.min(max, Math.round(col.scrollTop / DRUM_PITCH)));
+        col.scrollTop = idx * DRUM_PITCH;
         updateScheduleDrumDisplay();
       }, 120);
     });
     col.addEventListener("click", e => {
       if (e.target.classList.contains("drum-item")) {
-        col.scrollTo({ top: parseInt(e.target.dataset.val) * 42, behavior: "smooth" });
+        col.scrollTo({ top: parseInt(e.target.dataset.val) * DRUM_PITCH, behavior: "smooth" });
       }
     });
   }
@@ -1545,8 +1553,8 @@ function initScheduleDrum(h = 7, m = 0) {
 function scheduleDrumTime() {
   const hourCol = document.getElementById("asDrumHour");
   const minCol  = document.getElementById("asDrumMin");
-  const h = Math.max(0, Math.min(23, Math.round(hourCol.scrollTop / 42)));
-  const m = Math.max(0, Math.min(59, Math.round(minCol.scrollTop / 42)));
+  const h = Math.max(0, Math.min(23, Math.round(hourCol.scrollTop / DRUM_PITCH)));
+  const m = Math.max(0, Math.min(59, Math.round(minCol.scrollTop / DRUM_PITCH)));
   return { h, m, text: String(h).padStart(2, "0") + ":" + String(m).padStart(2, "0") };
 }
 
@@ -1563,7 +1571,7 @@ function fillApplianceSelect() {
   APPS.forEach(a => {
     const o = document.createElement("option");
     o.value = a.id;
-    o.textContent = `${a.icon}  CH ${a.id} — ${a.name}`;
+    o.textContent = `${a.icon}  CH ${a.id} — ${a.name} · GPIO ${a.pin}`;
     sel.appendChild(o);
   });
 }
@@ -1602,8 +1610,8 @@ function renderScheduleList() {
     const act = String(s.action || "ON").toUpperCase();
     return `<div class="sch-row">
       <div class="sch-row-main">
-        <div class="sch-row-name">${a.icon || "⚡"} ${s.name}</div>
-        <div class="sch-row-meta">#${s.slot} &middot; ${dayName[s.day] || s.day} &middot; ${s.time}</div>
+        <div class="sch-row-name">${a.icon || "⚡"} ${a.name || s.name}</div>
+        <div class="sch-row-meta">#${s.slot} &middot; ${dayName[s.day] || s.day} &middot; ${s.time}${a.pin !== undefined ? ` &middot; GPIO ${a.pin}` : ""}</div>
       </div>
       <div style="display:flex;align-items:center;gap:8px;">
         <span class="sch-row-act ${act.toLowerCase()}">${act}</span>
