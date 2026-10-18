@@ -440,8 +440,39 @@ body {
 .app-toggle-btn.on {
   background: var(--crimson-bg); border-color: rgba(239, 68, 68, 0.4); color: var(--crimson);
 }
-.app-toggle-btn.pulse {
-  background: var(--amber-bg); border-color: rgba(245, 158, 11, 0.4); color: var(--amber);
+.app-btn-row { display: flex; align-items: center; gap: 6px; }
+.app-sch-btn {
+  background: rgba(6, 182, 212, 0.10); border: 1px solid rgba(6, 182, 212, 0.35);
+  color: var(--cyan); border-radius: var(--radius-sm); padding: 4px 8px;
+  font-size: 12px; cursor: pointer; transition: all 0.2s;
+}
+.app-sch-btn:hover { background: rgba(6, 182, 212, 0.25); }
+
+/* ── SCHEDULE MANAGER ── */
+.sch-row {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  background: #090d16; border: 1px solid var(--border); border-radius: var(--radius-sm);
+  padding: 9px 12px; margin-bottom: 7px;
+}
+.sch-row-main { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.sch-row-name { font-size: 13px; font-weight: 700; color: #fff; }
+.sch-row-meta { font-size: 11px; color: var(--text-muted); letter-spacing: .4px; }
+.sch-row-act { font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 6px; }
+.sch-row-act.on { background: var(--emerald-bg); color: var(--emerald); }
+.sch-row-act.off { background: var(--crimson-bg); color: var(--crimson); }
+.sch-del-btn {
+  background: rgba(239, 68, 68, 0.12); border: 1px solid rgba(239, 68, 68, 0.35);
+  color: var(--crimson); border-radius: 6px; padding: 5px 9px; font-size: 11px;
+  font-weight: 700; cursor: pointer;
+}
+.sch-del-btn:hover { background: rgba(239, 68, 68, 0.28); }
+.sch-empty { font-size: 12px; color: var(--text-dim); text-align: center; padding: 12px 0; }
+.sch-list-wrap { max-height: 190px; overflow-y: auto; }
+.tg-user-row {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  background: #090d16; border: 1px solid var(--border); border-radius: var(--radius-sm);
+  padding: 8px 12px; margin-bottom: 6px; font-size: 12px; color: #e0e0e0;
+  font-family: 'SF Mono', 'Fira Code', monospace;
 }
 
 /* ── SCHEDULE MODAL ── */
@@ -619,6 +650,7 @@ body {
       <button class="action-btn btn-all-on" onclick="masterLights(true)">💡 ALL LIGHTS ON</button>
       <button class="action-btn btn-all-off" onclick="masterLights(false)">🌑 ALL LIGHTS OFF</button>
       <button class="action-btn btn-sch" onclick="openScheduleModal()">⏱ PUMP TIMER</button>
+      <button class="action-btn btn-sch" onclick="openAutoScheduleModal()">📅 SCHEDULES</button>
     </div>
 
     <div class="main-cols">
@@ -818,6 +850,64 @@ body {
   </div>
 </div>
 
+<!-- AUTOMATION SCHEDULE MODAL (all 9 appliances) -->
+<div class="modal-overlay" id="autoSchedModal">
+  <div class="modal-box">
+    <div class="modal-head">
+      <h3>📅 AUTOMATION SCHEDULES</h3>
+      <button class="modal-close" onclick="closeAutoScheduleModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label>Appliance</label>
+        <select id="asAppliance"></select>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+        <div class="form-group">
+          <label>Repeat</label>
+          <select id="asDay">
+            <option value="DAILY">EVERY DAY</option>
+            <option value="SUN">SUNDAY</option>
+            <option value="MON">MONDAY</option>
+            <option value="TUE">TUESDAY</option>
+            <option value="WED">WEDNESDAY</option>
+            <option value="THU">THURSDAY</option>
+            <option value="FRI">FRIDAY</option>
+            <option value="SAT">SATURDAY</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Action</label>
+          <select id="asAction">
+            <option value="ON">TURN ON</option>
+            <option value="OFF">TURN OFF</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Trigger Time — scroll wheels to set</label>
+        <div class="drum-picker-wrap">
+          <div class="drum-picker-highlight"></div>
+          <div class="drum-col" id="asDrumHour"></div>
+          <div class="drum-sep">:</div>
+          <div class="drum-col" id="asDrumMin"></div>
+        </div>
+        <div style="text-align:center;font-size:11px;color:var(--text-dim);margin-top:6px;">
+          Selected: <span id="asTimeDisplay" style="color:var(--cyan);font-weight:700;">07:00</span>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Saved Schedules <span id="asCount" style="color:var(--cyan);text-transform:none;"></span></label>
+        <div class="sch-list-wrap" id="asList"><div class="sch-empty">Loading…</div></div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="modal-btn secondary" onclick="refreshSchedules()">↻ REFRESH</button>
+      <button class="modal-btn primary" onclick="addAutoSchedule()">＋ ADD SCHEDULE</button>
+    </div>
+  </div>
+</div>
+
 <!-- TELEGRAM ADMIN MODAL -->
 <div class="modal-overlay" id="tgAdminModal">
   <div class="modal-box">
@@ -832,6 +922,10 @@ body {
       <div class="form-group">
         <label>New User Telegram Chat ID</label>
         <input type="text" id="newTgChatId" placeholder="e.g. 8765766747">
+      </div>
+      <div class="form-group">
+        <label>Authorized On Device <span id="tgBotState" style="text-transform:none;color:var(--cyan);"></span></label>
+        <div id="tgUserList"><div class="sch-empty">Waiting for device reply…</div></div>
       </div>
     </div>
     <div class="modal-foot">
@@ -848,7 +942,7 @@ body {
 const APPS = [
   { id: 1, name: "BOREWELL",       desc: "Groundwater Source",   icon: "🌊", isPump: true },
   { id: 2, name: "SUMP PUMP",      desc: "Water Transfer Pump",  icon: "💧", isPump: true },
-  { id: 3, name: "GARAGE DOOR",    desc: "1s Trigger Pulse",     icon: "🚗", isGarage: true },
+  { id: 3, name: "GARAGE DOOR",    desc: "Motorized Door Control", icon: "🚗" },
   { id: 4, name: "SPRINKLER",      desc: "Lawn & Garden",        icon: "🌧" },
   { id: 5, name: "PORCH LIGHT",    desc: "Front Entry Light",    icon: "💡", isLight: true },
   { id: 6, name: "BALCONY LIGHT",  desc: "Balcony Illumination", icon: "🔆", isLight: true },
@@ -869,6 +963,10 @@ let pumpState = {
 let mqttClient = null;
 let lastHeartbeat = 0;
 let hbChecker = null;
+let schedules = [];
+let tgUsers = [];
+let tgBotSet = false;
+let espOfflineFlag = false;
 
 // Settings
 let config = {
@@ -1002,14 +1100,21 @@ function buildApplianceGrid() {
       </div>
       <div class="app-card-bottom">
         <div class="app-state-text" id="appStateLbl${a.id}">${isOn ? "ACTIVE" : "OFF"}</div>
-        <button class="app-toggle-btn ${a.isGarage ? 'pulse' : (isOn ? 'on' : 'off')}" id="appTogBtn${a.id}">
-          ${a.isGarage ? 'PULSE ⚡' : (isOn ? 'TURN OFF' : 'TURN ON')}
-        </button>
+        <div class="app-btn-row">
+          <button class="app-sch-btn" title="Schedule ${a.name}">⏰</button>
+          <button class="app-toggle-btn ${isOn ? 'on' : 'off'}" id="appTogBtn${a.id}">
+            ${isOn ? 'TURN OFF' : 'TURN ON'}
+          </button>
+        </div>
       </div>
     `;
-    card.querySelector("button").addEventListener("click", (e) => {
+    card.querySelector(".app-toggle-btn").addEventListener("click", (e) => {
       e.stopPropagation();
       triggerAppliance(a.id);
+    });
+    card.querySelector(".app-sch-btn").addEventListener("click", (e) => {
+      e.stopPropagation();
+      openAutoScheduleModal(a.id);
     });
     card.addEventListener("click", () => triggerAppliance(a.id));
     grid.appendChild(card);
@@ -1017,30 +1122,19 @@ function buildApplianceGrid() {
 }
 
 function updateAppCard(id) {
-  const a = APPS[id - 1];
   const isOn = relayStates[id - 1];
   const card = document.getElementById("appCard" + id);
   if (!card) return;
   card.className = "app-card" + (isOn ? " is-on" : "");
-  document.getElementById("appStateLbl" + id).textContent = isOn ? (a.isGarage ? "TRIGGERED" : "ACTIVE") : "OFF";
+  document.getElementById("appStateLbl" + id).textContent = isOn ? "ACTIVE" : "OFF";
   const btn = document.getElementById("appTogBtn" + id);
-  if (a.isGarage) {
-    btn.className = "app-toggle-btn pulse";
-    btn.textContent = "PULSE ⚡";
-  } else {
-    btn.className = "app-toggle-btn " + (isOn ? "on" : "off");
-    btn.textContent = isOn ? "TURN OFF" : "TURN ON";
-  }
+  btn.className = "app-toggle-btn " + (isOn ? "on" : "off");
+  btn.textContent = isOn ? "TURN OFF" : "TURN ON";
 }
 
 /* ── APPLIANCE TRIGGER ── */
 function triggerAppliance(id) {
   const a = APPS[id - 1];
-  if (a.isGarage) {
-    mqttPublish(`${config.prefix}/relay/${id}/cmd`, "ON");
-    toast("Garage Door Triggered ⚡", "🚗");
-    return;
-  }
   const newState = !relayStates[id - 1];
   relayStates[id - 1] = newState;
   updateAppCard(id);
@@ -1142,6 +1236,7 @@ function connectMQTT() {
   }
   setMQTTState("connecting");
   lastHeartbeat = 0;
+  espOfflineFlag = false;
   updateHeartbeatStatus();
 
   // Smart Port Mapping for WebSockets (bridge 1883 TCP -> 8884 WSS)
@@ -1171,9 +1266,12 @@ function connectMQTT() {
     mqttClient.subscribe(`${px}/pump/telemetry`);
     mqttClient.subscribe(`${px}/device/heartbeat`);
     mqttClient.subscribe(`${px}/device/status`);
+    mqttClient.subscribe(`${px}/schedules`);
+    mqttClient.subscribe(`${px}/admin/users`);
 
     // Request full status refresh
     mqttClient.publish(`${px}/get`, "1");
+    mqttClient.publish(`${px}/schedule/list`, "1");
 
     // Deliver any queued admin/config messages (token, chat IDs, timers)
     flushMqttQueue();
@@ -1185,7 +1283,38 @@ function connectMQTT() {
 
     if (topic === `${px}/device/heartbeat`) {
       lastHeartbeat = Date.now();
+      espOfflineFlag = false;
       updateHeartbeatStatus();
+      return;
+    }
+    if (topic === `${px}/device/status`) {
+      // Retained LWT: instant offline detection instead of waiting for heartbeat timeout
+      if (text.toLowerCase() === "offline") {
+        espOfflineFlag = true;
+        lastHeartbeat = 0;
+      } else {
+        espOfflineFlag = false;
+        mqttClient.publish(`${px}/get`, "1");
+        mqttClient.publish(`${px}/schedule/list`, "1");
+      }
+      updateHeartbeatStatus();
+      return;
+    }
+    if (topic === `${px}/schedules`) {
+      try {
+        const d = JSON.parse(text);
+        schedules = Array.isArray(d.schedules) ? d.schedules : [];
+        renderScheduleList();
+      } catch (e) { console.error("Schedule list error", e); }
+      return;
+    }
+    if (topic === `${px}/admin/users`) {
+      try {
+        const d = JSON.parse(text);
+        tgUsers = Array.isArray(d.users) ? d.users : [];
+        tgBotSet = !!d.botSet;
+        renderTgUserList();
+      } catch (e) { console.error("TG user list error", e); }
       return;
     }
     if (topic === `${px}/pump/telemetry`) {
@@ -1252,7 +1381,9 @@ function updateHeartbeatStatus() {
   const age = lastHeartbeat === 0 ? Infinity : (Date.now() - lastHeartbeat) / 1000;
   const d = document.getElementById("espDot"), l = document.getElementById("espText");
   d.className = "badge-dot";
-  if (age < 40) {
+  if (espOfflineFlag) {
+    d.classList.add("red"); l.textContent = "ESP32 ✕";
+  } else if (age < 40) {
     d.classList.add("green"); l.textContent = "ESP32 ●";
   } else if (age < 90) {
     d.classList.add("amber", "pulse"); l.textContent = "ESP32 ~";
@@ -1367,6 +1498,140 @@ function cancelPumpTimer() {
   toast((which === "bore" ? "Ground Sump Pump" : "Overhead Tank Pump") + " timer cancelled", "⏹");
 }
 
+/* ── APPLIANCE AUTOMATION SCHEDULES (all 9 channels) ── */
+let asDrumReady = false;
+
+function initScheduleDrum(h = 7, m = 0) {
+  const hourCol = document.getElementById("asDrumHour");
+  const minCol  = document.getElementById("asDrumMin");
+  hourCol.innerHTML = "";
+  minCol.innerHTML  = "";
+  for (let i = 0; i < 24; i++) {
+    const el = document.createElement("div");
+    el.className = "drum-item";
+    el.textContent = String(i).padStart(2, "0");
+    el.dataset.val = i;
+    hourCol.appendChild(el);
+  }
+  for (let i = 0; i < 60; i++) {
+    const el = document.createElement("div");
+    el.className = "drum-item";
+    el.textContent = String(i).padStart(2, "0");
+    el.dataset.val = i;
+    minCol.appendChild(el);
+  }
+  hourCol.scrollTop = h * 42;
+  minCol.scrollTop  = m * 42;
+  updateScheduleDrumDisplay();
+
+  function bindWheel(col, max) {
+    col.addEventListener("scroll", () => {
+      clearTimeout(col._snapTimer);
+      col._snapTimer = setTimeout(() => {
+        const idx = Math.max(0, Math.min(max, Math.round(col.scrollTop / 42)));
+        col.scrollTop = idx * 42;
+        updateScheduleDrumDisplay();
+      }, 120);
+    });
+    col.addEventListener("click", e => {
+      if (e.target.classList.contains("drum-item")) {
+        col.scrollTo({ top: parseInt(e.target.dataset.val) * 42, behavior: "smooth" });
+      }
+    });
+  }
+  bindWheel(hourCol, 23);
+  bindWheel(minCol, 59);
+  asDrumReady = true;
+}
+
+function scheduleDrumTime() {
+  const hourCol = document.getElementById("asDrumHour");
+  const minCol  = document.getElementById("asDrumMin");
+  const h = Math.max(0, Math.min(23, Math.round(hourCol.scrollTop / 42)));
+  const m = Math.max(0, Math.min(59, Math.round(minCol.scrollTop / 42)));
+  return { h, m, text: String(h).padStart(2, "0") + ":" + String(m).padStart(2, "0") };
+}
+
+function updateScheduleDrumDisplay() {
+  const t = scheduleDrumTime();
+  document.getElementById("asTimeDisplay").textContent = t.text;
+  document.getElementById("asDrumHour").querySelectorAll(".drum-item").forEach((el, i) => el.classList.toggle("selected", i === t.h));
+  document.getElementById("asDrumMin").querySelectorAll(".drum-item").forEach((el, i) => el.classList.toggle("selected", i === t.m));
+}
+
+function fillApplianceSelect() {
+  const sel = document.getElementById("asAppliance");
+  if (sel.options.length) return;
+  APPS.forEach(a => {
+    const o = document.createElement("option");
+    o.value = a.id;
+    o.textContent = `${a.icon}  CH ${a.id} — ${a.name}`;
+    sel.appendChild(o);
+  });
+}
+
+function openAutoScheduleModal(relayId) {
+  fillApplianceSelect();
+  if (relayId) document.getElementById("asAppliance").value = relayId;
+  document.getElementById("autoSchedModal").classList.add("open");
+  if (!asDrumReady) setTimeout(() => initScheduleDrum(7, 0), 60);
+  renderScheduleList();
+  refreshSchedules();
+}
+
+function closeAutoScheduleModal() {
+  document.getElementById("autoSchedModal").classList.remove("open");
+}
+
+function refreshSchedules() {
+  mqttPublish(`${config.prefix}/schedule/list`, "1");
+}
+
+function renderScheduleList() {
+  const list = document.getElementById("asList");
+  if (!list) return;
+  document.getElementById("asCount").textContent = schedules.length ? `(${schedules.length}/20)` : "(none)";
+  if (!schedules.length) {
+    list.innerHTML = '<div class="sch-empty">No schedules saved yet. Pick an appliance and time above, then tap ADD SCHEDULE.</div>';
+    return;
+  }
+  const dayName = { SUN: "Sunday", MON: "Monday", TUE: "Tuesday", WED: "Wednesday",
+                    THU: "Thursday", FRI: "Friday", SAT: "Saturday", DAILY: "Every day" };
+  list.innerHTML = schedules.map(s => {
+    const a = APPS[(s.relay || 1) - 1] || {};
+    const act = String(s.action || "ON").toUpperCase();
+    return `<div class="sch-row">
+      <div class="sch-row-main">
+        <div class="sch-row-name">${a.icon || "⚡"} ${s.name}</div>
+        <div class="sch-row-meta">#${s.slot} &middot; ${dayName[s.day] || s.day} &middot; ${s.time}</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <span class="sch-row-act ${act.toLowerCase()}">${act}</span>
+        <button class="sch-del-btn" onclick="deleteAutoSchedule(${s.slot})">DELETE</button>
+      </div>
+    </div>`;
+  }).join("");
+}
+
+function addAutoSchedule() {
+  const relay = parseInt(document.getElementById("asAppliance").value) || 1;
+  const day = document.getElementById("asDay").value;
+  const action = document.getElementById("asAction").value;
+  const t = scheduleDrumTime();
+  if (schedules.length >= 20) { toast("Schedule memory full (20 max) — delete one first", "⚠"); return; }
+  mqttPublish(`${config.prefix}/schedule/set`, JSON.stringify({ relay, day, time: t.text, action }));
+  const a = APPS[relay - 1];
+  toast(`${a.icon} ${a.name} → ${action} at ${t.text} (${day})`, "📅");
+  setTimeout(refreshSchedules, 800);
+}
+
+function deleteAutoSchedule(slot) {
+  mqttPublish(`${config.prefix}/schedule/del`, JSON.stringify({ slot }));
+  schedules = schedules.filter(s => s.slot !== slot);
+  renderScheduleList();
+  toast(`Schedule #${slot} deleted`, "🗑");
+}
+
 /* ── SETTINGS MODALS ── */
 document.getElementById("openSettingsBtn").addEventListener("click", () => {
   document.getElementById("cfgBroker").value = config.broker;
@@ -1395,10 +1660,15 @@ function toggleTokenVis() {
 
 function testTelegramToken() {
   const tok = document.getElementById("cfgBotToken").value.trim();
-  if (tok.length < 10) { toast("Enter a valid bot token first", "⚠"); return; }
+  if (!/^\d{6,12}:[A-Za-z0-9_-]{20,}$/.test(tok)) {
+    toast("That does not look like a BotFather token", "⚠");
+    return;
+  }
   mqttPublish(`${config.prefix}/admin/tg-token`, tok);
-  setTimeout(() => mqttPublish(`${config.prefix}/admin/tg-test`, "ping"), 400);
-  toast("Test message sent via MQTT — check Telegram!", "📡");
+  // Give the device time to store the token before asking it to broadcast
+  setTimeout(() => mqttPublish(`${config.prefix}/admin/tg-test`, "ping"), 1200);
+  setTimeout(() => mqttPublish(`${config.prefix}/get`, "1"), 2000);
+  toast("Token saved — test message sent to all authorized chats", "📡");
 }
 
 function saveSettings() {
@@ -1421,36 +1691,83 @@ function saveSettings() {
     mqttPublish(`${config.prefix}/admin/tg-token`, tok);
   }
 
-  // Save & publish chat IDs (one per line)
-  const rawIds = document.getElementById("cfgChatIds").value
-    .split("\n").map(s => s.trim()).filter(s => s.length > 0);
+  // Save & publish chat IDs (one per line or comma-separated); revoke removed ones
+  const oldIds = [];
   for (let i = 0; i < 10; i++) {
-    if (i < rawIds.length) {
-      localStorage.setItem(`mh_chat_${i}`, rawIds[i]);
-      mqttPublish(`${config.prefix}/admin/adduser`, rawIds[i]);
-    } else {
-      localStorage.removeItem(`mh_chat_${i}`);
-    }
+    const v = localStorage.getItem(`mh_chat_${i}`);
+    if (v) oldIds.push(v);
   }
+  const rawIds = document.getElementById("cfgChatIds").value
+    .split(/[\n,]/).map(s => s.trim()).filter(s => s.length > 0).slice(0, 10);
+  for (let i = 0; i < 10; i++) {
+    if (i < rawIds.length) localStorage.setItem(`mh_chat_${i}`, rawIds[i]);
+    else localStorage.removeItem(`mh_chat_${i}`);
+  }
+  rawIds.forEach(id => mqttPublish(`${config.prefix}/admin/adduser`, id));
+  let revoked = 0;
+  oldIds.forEach(id => {
+    if (!rawIds.includes(id)) { mqttPublish(`${config.prefix}/admin/deluser`, id); revoked++; }
+  });
+  tgUsers = rawIds.slice();
+  renderTgUserList();
 
   closeSettingsModal();
   connectMQTT();
-  toast(`Settings saved${tok.length >= 10 ? " + Telegram config sent" : ""}`, "⚙");
+  toast(`Settings saved${tok.length >= 10 ? " + Telegram config sent" : ""}` +
+        (revoked ? ` · ${revoked} user${revoked > 1 ? "s" : ""} revoked` : ""), "⚙");
 }
 
 /* ── TELEGRAM ADMIN MODAL ── */
 document.getElementById("openTgAdminBtn").addEventListener("click", () => {
   document.getElementById("tgAdminModal").classList.add("open");
+  renderTgUserList();
+  // Ask the device for its live authorized-user list (published on /admin/users)
+  mqttPublish(`${config.prefix}/get`, "1");
 });
 function closeTgAdminModal() { document.getElementById("tgAdminModal").classList.remove("open"); }
 
+function renderTgUserList() {
+  const box = document.getElementById("tgUserList");
+  if (!box) return;
+  document.getElementById("tgBotState").textContent = tgBotSet ? "· bot token loaded" : "· no bot token set";
+  if (!tgUsers.length) {
+    box.innerHTML = '<div class="sch-empty">No authorized users on the device yet.</div>';
+    return;
+  }
+  box.innerHTML = tgUsers.map(id =>
+    `<div class="tg-user-row"><span>👤 ${id}</span>` +
+    `<button class="sch-del-btn" onclick="removeTelegramUser('${id}')">REMOVE</button></div>`
+  ).join("");
+}
+
 function addTelegramUser() {
   const id = document.getElementById("newTgChatId").value.trim();
-  if (!id) { toast("Please enter a valid chat ID", "⚠"); return; }
+  if (!/^\d{5,}$/.test(id)) { toast("Chat ID must be numeric (e.g. 8907540267)", "⚠"); return; }
   mqttPublish(`${config.prefix}/admin/adduser`, id);
   document.getElementById("newTgChatId").value = "";
-  closeTgAdminModal();
-  toast(`User ${id} authorized via MQTT`, "👥");
+  if (!tgUsers.includes(id)) tgUsers.push(id);
+  renderTgUserList();
+  syncChatIdsToStorage();
+  toast(`User ${id} authorized on device`, "👥");
+  setTimeout(() => mqttPublish(`${config.prefix}/get`, "1"), 900);
+}
+
+function removeTelegramUser(id) {
+  mqttPublish(`${config.prefix}/admin/deluser`, id);
+  tgUsers = tgUsers.filter(u => u !== id);
+  renderTgUserList();
+  syncChatIdsToStorage();
+  toast(`User ${id} removed from device`, "🚫");
+}
+
+// Keeps the settings-modal chat ID list in step with what is on the device
+function syncChatIdsToStorage() {
+  for (let i = 0; i < 10; i++) {
+    if (i < tgUsers.length) localStorage.setItem(`mh_chat_${i}`, tgUsers[i]);
+    else localStorage.removeItem(`mh_chat_${i}`);
+  }
+  const ta = document.getElementById("cfgChatIds");
+  if (ta) ta.value = tgUsers.join("\n");
 }
 
 /* ── LOGOUT ── */
