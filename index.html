@@ -5,601 +5,432 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Modern House Automation</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Rajdhani:wght@500;600;700&family=Orbitron:wght@500;700;900&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
 <style>
 :root {
-  --bg: #090d16;
-  --bg-gradient: radial-gradient(circle at 50% 0%, #151d30 0%, #090d16 80%);
-  --surface: rgba(18, 24, 38, 0.75);
-  --surface-hover: rgba(26, 35, 54, 0.85);
-  --surface-solid: #121927;
-  --surface-accent: #1e293b;
-  --border: rgba(56, 189, 248, 0.16);
-  --border-active: rgba(56, 189, 248, 0.45);
-  --cyan: #06b6d4;
-  --cyan-glow: rgba(6, 182, 212, 0.35);
-  --emerald: #10b981;
-  --emerald-bg: rgba(16, 185, 129, 0.12);
-  --emerald-glow: rgba(16, 185, 129, 0.35);
-  --amber: #f59e0b;
-  --amber-bg: rgba(245, 158, 11, 0.12);
-  --amber-glow: rgba(245, 158, 11, 0.35);
-  --crimson: #ef4444;
-  --crimson-bg: rgba(239, 68, 68, 0.12);
-  --crimson-glow: rgba(239, 68, 68, 0.35);
-  --water: #38bdf8;
-  --water-deep: #0284c7;
-  --text: #f1f5f9;
-  --text-muted: #94a3b8;
-  --text-dim: #64748b;
-  --radius-sm: 8px;
+  --bg: #0a1020;
+  --bg-gradient: linear-gradient(180deg, #0e1728 0%, #0a1020 46%, #090e1b 100%);
+  --surface: #121c30;
+  --surface-hover: #17233a;
+  --surface-solid: #121c30;
+  --surface-accent: #1a2740;
+  --glass: rgba(255, 255, 255, 0.035);
+  --field: #0f1728;
+  --border: rgba(148, 163, 184, 0.16);
+  --border-strong: rgba(148, 163, 184, 0.26);
+  --border-active: rgba(96, 165, 250, 0.55);
+  --cyan: #60a5fa;
+  --cyan-ink: #1d4ed8;
+  --cyan-glow: rgba(96, 165, 250, 0.16);
+  --emerald: #34d399;
+  --emerald-bg: rgba(52, 211, 153, 0.12);
+  --emerald-glow: rgba(52, 211, 153, 0.18);
+  --amber: #fbbf24;
+  --amber-bg: rgba(251, 191, 36, 0.12);
+  --amber-glow: rgba(251, 191, 36, 0.18);
+  --crimson: #f87171;
+  --crimson-bg: rgba(248, 113, 113, 0.12);
+  --crimson-glow: rgba(248, 113, 113, 0.18);
+  --water: #3b82f6;
+  --water-deep: #1e40af;
+  --text: #e8edf7;
+  --text-muted: #9fb0ca;
+  --text-dim: #6f8199;
+  --radius-sm: 10px;
   --radius-md: 14px;
-  --radius-lg: 20px;
-  --shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+  --radius-lg: 18px;
+  --shadow-sm: 0 1px 2px rgba(3, 7, 18, 0.6);
+  --shadow: 0 1px 2px rgba(3, 7, 18, 0.55), 0 10px 28px -8px rgba(3, 7, 18, 0.7);
+  --shadow-lg: 0 2px 6px rgba(3, 7, 18, 0.5), 0 28px 60px -16px rgba(3, 7, 18, 0.85);
+  --ring: 0 0 0 3px rgba(96, 165, 250, 0.22);
+  --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
 }
 
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-html { height: 100%; }
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+html { -webkit-text-size-adjust: 100%; }
+
 body {
-  background: var(--bg);
-  background-image: var(--bg-gradient);
+  font-family: Inter, -apple-system, "Segoe UI", Roboto, sans-serif;
+  background: var(--bg-gradient), var(--bg);
+  background-attachment: fixed;
   color: var(--text);
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-  min-height: 100%;
-  overflow-x: hidden;
-  user-select: none;
-  -webkit-tap-highlight-color: transparent;
+  font-size: 14px;
+  line-height: 1.5;
+  letter-spacing: -0.006em;
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-::-webkit-scrollbar { width: 6px; }
-::-webkit-scrollbar-track { background: var(--bg); }
-::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 4px; }
-::-webkit-scrollbar-thumb:hover { background: var(--cyan); }
+::selection { background: rgba(96, 165, 250, 0.3); }
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(148, 163, 184, 0.22); border-radius: 8px; border: 2px solid transparent; background-clip: content-box; }
+::-webkit-scrollbar-thumb:hover { background: rgba(148, 163, 184, 0.38); background-clip: content-box; }
 
-/* ── LOGIN VIEW ── */
+button, input, select, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; }
+code, kbd { font-family: var(--mono); font-size: 0.92em; background: var(--glass); border: 1px solid var(--border); border-radius: 5px; padding: 1px 5px; }
+
+/* ── LOGIN ── */
 #loginView {
-  position: fixed; inset: 0; z-index: 1000;
-  display: flex; align-items: center; justify-content: center;
-  padding: 20px;
-  background: radial-gradient(circle at 50% 30%, #172554 0%, #090d16 75%);
+  min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 24px;
+  background: radial-gradient(900px 460px at 50% -10%, rgba(37, 99, 235, 0.20), transparent 70%);
 }
 .login-card {
-  width: 100%; max-width: 400px;
-  background: rgba(18, 24, 38, 0.85);
-  backdrop-filter: blur(20px);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  padding: 36px 30px;
-  box-shadow: 0 10px 40px rgba(0,0,0,0.6), 0 0 30px rgba(6, 182, 212, 0.1);
-  text-align: center;
-  animation: fadeIn 0.6s ease-out;
+  width: 100%; max-width: 400px; background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius-lg); box-shadow: var(--shadow-lg); padding: 36px 30px 30px; text-align: center;
 }
 .villa-icon {
-  width: 72px; height: 72px; margin: 0 auto 16px;
-  border-radius: 20px;
-  background: linear-gradient(135deg, rgba(6, 182, 212, 0.2), rgba(59, 130, 246, 0.2));
-  border: 1.5px solid var(--border-active);
-  display: flex; align-items: center; justify-content: center;
-  font-size: 36px;
-  box-shadow: 0 0 24px var(--cyan-glow);
+  width: 58px; height: 58px; margin: 0 auto 18px; border-radius: 16px; display: grid; place-items: center;
+  font-size: 26px; background: linear-gradient(160deg, #2563eb, #1e3a8a);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18), 0 8px 20px -6px rgba(37, 99, 235, 0.6);
 }
-.login-title {
-  font-family: 'Orbitron', sans-serif;
-  font-size: 19px; font-weight: 700;
-  letter-spacing: 1.5px;
-  color: #fff;
-  margin-bottom: 4px;
-}
-.login-subtitle {
-  font-size: 11px;
-  color: var(--text-muted);
-  letter-spacing: 2px;
-  text-transform: uppercase;
-  margin-bottom: 26px;
-}
-.pw-field {
-  position: relative; margin-bottom: 18px;
-}
+.login-title { font-size: 19px; font-weight: 700; letter-spacing: -0.02em; }
+.login-subtitle { font-size: 13px; color: var(--text-muted); margin-top: 4px; }
+.pw-field { position: relative; margin: 26px 0 12px; }
 .pw-field input {
-  width: 100%; padding: 13px 44px 13px 16px;
-  background: rgba(10, 15, 26, 0.8);
-  border: 1.5px solid var(--border);
-  border-radius: var(--radius-md);
-  color: #fff; font-size: 15px; outline: none;
-  transition: all 0.25s;
+  width: 100%; height: 46px; padding: 0 44px 0 14px; background: var(--field); border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm); font-size: 15px; letter-spacing: 0.02em; transition: border-color 0.16s, box-shadow 0.16s;
 }
-.pw-field input:focus {
-  border-color: var(--cyan);
-  box-shadow: 0 0 15px var(--cyan-glow);
-}
+.pw-field input:focus { outline: none; border-color: var(--cyan); box-shadow: var(--ring); }
 .pw-toggle {
-  position: absolute; right: 14px; top: 50%; transform: translateY(-50%);
-  background: none; border: none; color: var(--text-dim); cursor: pointer;
-  font-size: 16px;
+  position: absolute; right: 6px; top: 50%; transform: translateY(-50%); width: 34px; height: 34px;
+  background: none; border: 0; border-radius: 8px; color: var(--text-dim); font-size: 15px;
 }
-.pw-toggle:hover { color: var(--cyan); }
+.pw-toggle:hover { color: var(--text-muted); background: var(--glass); }
 .login-btn {
-  width: 100%; padding: 13px;
-  background: linear-gradient(135deg, var(--cyan), #3b82f6);
-  border: none; border-radius: var(--radius-md);
-  color: #fff; font-weight: 600; font-size: 14px;
-  letter-spacing: 1px; cursor: pointer;
-  box-shadow: 0 4px 20px var(--cyan-glow);
-  transition: transform 0.15s, opacity 0.2s;
+  width: 100%; height: 46px; border: 0; border-radius: var(--radius-sm); color: #fff; font-size: 14px; font-weight: 600;
+  background: linear-gradient(180deg, #3b82f6, #2563eb); box-shadow: 0 6px 16px -8px rgba(37, 99, 235, 0.9), inset 0 1px 0 rgba(255, 255, 255, 0.16);
+  transition: filter 0.16s, transform 0.06s;
 }
-.login-btn:hover { opacity: 0.92; transform: translateY(-1px); }
-.login-btn:active { transform: translateY(0); }
-.login-err {
-  margin-top: 14px; padding: 10px;
-  background: var(--crimson-bg); border: 1px solid rgba(239, 68, 68, 0.3);
-  border-radius: var(--radius-sm); color: var(--crimson); font-size: 12px;
-  display: none;
-}
+.login-btn:hover { filter: brightness(1.08); }
+.login-btn:active { transform: translateY(1px); }
+.login-err { display: none; margin-top: 14px; font-size: 12.5px; color: var(--crimson); background: var(--crimson-bg); border: 1px solid rgba(248, 113, 113, 0.3); border-radius: var(--radius-sm); padding: 9px 12px; }
+.login-err.show { display: block; }
 
-/* ── MAIN DASHBOARD ── */
-#appView {
-  display: none; flex-direction: column; min-height: 100vh;
-}
+/* ── NAVBAR ── */
+#appView { display: none; flex-direction: column; min-height: 100vh; }
 .navbar {
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 12px 20px;
-  background: rgba(18, 24, 38, 0.7);
-  backdrop-filter: blur(16px);
+  position: sticky; top: 0; z-index: 40; display: flex; align-items: center; justify-content: space-between;
+  gap: 18px; padding: 14px 26px; background: rgba(12, 19, 33, 0.94); backdrop-filter: blur(10px);
   border-bottom: 1px solid var(--border);
-  position: sticky; top: 0; z-index: 100;
 }
-.nav-brand { display: flex; align-items: center; gap: 12px; }
+.nav-brand { display: flex; align-items: center; gap: 12px; min-width: 0; }
 .nav-logo {
-  width: 40px; height: 40px; border-radius: 12px;
-  background: linear-gradient(135deg, rgba(6, 182, 212, 0.25), rgba(59, 130, 246, 0.25));
-  border: 1px solid var(--border-active);
-  display: flex; align-items: center; justify-content: center;
-  font-size: 20px; box-shadow: 0 0 16px var(--cyan-glow);
+  width: 38px; height: 38px; border-radius: 11px; display: grid; place-items: center; font-size: 17px; color: #fff;
+  background: linear-gradient(160deg, #2563eb, #1e40af); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.16);
 }
-.nav-titles h1 {
-  font-family: 'Orbitron', sans-serif;
-  font-size: 14px; font-weight: 700; letter-spacing: 1px; color: #fff;
-}
-.nav-titles p {
-  font-size: 10px; color: var(--cyan); letter-spacing: 1.5px; text-transform: uppercase;
-}
-.nav-badges { display: flex; align-items: center; gap: 8px; }
+.nav-titles h1 { font-size: 15px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.2; }
+.nav-titles p { font-size: 11.5px; color: var(--text-dim); font-weight: 500; }
+.nav-badges { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .badge {
-  display: flex; align-items: center; gap: 6px;
-  padding: 5px 10px; background: rgba(30, 41, 59, 0.6);
-  border: 1px solid var(--border); border-radius: 20px;
-  font-size: 11px; font-weight: 500; color: var(--text-muted);
+  display: inline-flex; align-items: center; gap: 7px; height: 30px; padding: 0 11px; font-size: 11.5px; font-weight: 600;
+  color: var(--text-muted); background: var(--glass); border: 1px solid var(--border); border-radius: 999px; white-space: nowrap;
 }
-.badge-dot {
-  width: 8px; height: 8px; border-radius: 50%; background: var(--text-dim);
-  transition: all 0.3s;
-}
-.badge-dot.green { background: var(--emerald); box-shadow: 0 0 8px var(--emerald); }
-.badge-dot.amber { background: var(--amber); box-shadow: 0 0 8px var(--amber); }
-.badge-dot.red   { background: var(--crimson); box-shadow: 0 0 8px var(--crimson); }
-.badge-dot.pulse { animation: pulseAnim 1.4s infinite; }
-@keyframes pulseAnim { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
-
-.nav-actions { display: flex; align-items: center; gap: 6px; }
+.badge-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--text-dim); flex: none; }
+.badge-dot.green { background: var(--emerald); box-shadow: 0 0 0 3px var(--emerald-bg); }
+.badge-dot.amber { background: var(--amber); box-shadow: 0 0 0 3px var(--amber-bg); }
+.badge-dot.red { background: var(--crimson); box-shadow: 0 0 0 3px var(--crimson-bg); }
+.badge-dot.pulse { animation: dotPulse 2.2s ease-in-out infinite; }
+@keyframes dotPulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
+.nav-actions { display: flex; align-items: center; gap: 8px; }
 .btn-icon {
-  background: rgba(30, 41, 59, 0.6); border: 1px solid var(--border);
-  color: var(--text-muted); border-radius: var(--radius-sm);
-  padding: 7px 10px; font-size: 13px; cursor: pointer;
-  transition: all 0.2s;
+  width: 32px; height: 32px; border-radius: 9px; display: grid; place-items: center; font-size: 15px;
+  background: var(--glass); border: 1px solid var(--border); color: var(--text-muted); transition: background 0.16s, border-color 0.16s;
 }
-.btn-icon:hover { color: #fff; border-color: var(--cyan); background: rgba(6, 182, 212, 0.15); }
+.btn-icon:hover { background: var(--surface-hover); border-color: var(--border-strong); color: #fff; }
 .btn-logout {
-  background: var(--crimson-bg); border: 1px solid rgba(239, 68, 68, 0.3);
-  color: var(--crimson); font-size: 11px; font-weight: 600; padding: 7px 12px;
-  border-radius: var(--radius-sm); cursor: pointer; transition: all 0.2s;
+  height: 32px; padding: 0 13px; border-radius: 9px; font-size: 11.5px; font-weight: 600; color: var(--text-muted);
+  background: var(--glass); border: 1px solid var(--border); transition: color 0.16s, border-color 0.16s;
 }
-.btn-logout:hover { background: rgba(239, 68, 68, 0.25); }
+.btn-logout:hover { color: var(--crimson); border-color: rgba(248, 113, 113, 0.4); background: var(--crimson-bg); }
 
-/* ── MAIN CONTENT ── */
-.container {
-  max-width: 1200px; margin: 0 auto; padding: 18px 16px 40px;
-  display: flex; flex-direction: column; gap: 20px;
+/* ── LAYOUT ── */
+.container { max-width: 1180px; margin: 0 auto; padding: 24px 26px 46px; display: flex; flex-direction: column; gap: 20px; }
+.section-title {
+  font-size: 12px; font-weight: 650; letter-spacing: 0.04em; text-transform: uppercase; color: var(--text-dim);
+  display: flex; align-items: center; gap: 10px; margin-bottom: 12px;
 }
-
-/* ── QUICK ACTION STRIP ── */
-.quick-strip {
-  display: flex; flex-wrap: wrap; gap: 10px;
+.section-title::after { content: ""; flex: 1; height: 1px; background: var(--border); }
+.card {
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-md); box-shadow: var(--shadow);
 }
+.quick-strip { display: flex; flex-wrap: wrap; gap: 10px; }
 .action-btn {
-  flex: 1; min-width: 140px; padding: 10px 14px;
-  display: flex; align-items: center; justify-content: center; gap: 8px;
-  border-radius: var(--radius-md); font-family: 'Rajdhani', sans-serif;
-  font-size: 13px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase;
-  cursor: pointer; transition: all 0.2s; border: 1px solid;
+  flex: 1; min-width: 158px; height: 42px; display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  padding: 0 16px; font-size: 12.5px; font-weight: 600; letter-spacing: 0.01em; border-radius: var(--radius-sm);
+  background: var(--surface); border: 1px solid var(--border); color: var(--text-muted);
+  box-shadow: var(--shadow-sm); transition: background 0.16s, border-color 0.16s, color 0.16s;
 }
-.btn-all-on {
-  background: var(--emerald-bg); border-color: rgba(16, 185, 129, 0.35); color: var(--emerald);
-}
-.btn-all-on:hover { background: rgba(16, 185, 129, 0.25); box-shadow: 0 0 15px var(--emerald-glow); }
-.btn-all-off {
-  background: var(--crimson-bg); border-color: rgba(239, 68, 68, 0.35); color: var(--crimson);
-}
-.btn-all-off:hover { background: rgba(239, 68, 68, 0.25); box-shadow: 0 0 15px var(--crimson-glow); }
-.btn-sch {
-  background: rgba(6, 182, 212, 0.12); border-color: rgba(6, 182, 212, 0.35); color: var(--cyan);
-}
-.btn-sch:hover { background: rgba(6, 182, 212, 0.25); box-shadow: 0 0 15px var(--cyan-glow); }
+.action-btn:hover { background: var(--surface-hover); border-color: var(--border-strong); color: #fff; }
+.action-btn:active { transform: translateY(1px); }
+.btn-all-on { color: var(--emerald); border-color: rgba(52, 211, 153, 0.28); background: linear-gradient(180deg, rgba(52, 211, 153, 0.10), rgba(52, 211, 153, 0.04)); }
+.btn-all-on:hover { background: rgba(52, 211, 153, 0.18); border-color: rgba(52, 211, 153, 0.5); color: #fff; }
+.btn-all-off { color: var(--crimson); border-color: rgba(248, 113, 113, 0.28); background: linear-gradient(180deg, rgba(248, 113, 113, 0.10), rgba(248, 113, 113, 0.04)); }
+.btn-all-off:hover { background: rgba(248, 113, 113, 0.18); border-color: rgba(248, 113, 113, 0.5); color: #fff; }
+.btn-sch { color: var(--cyan); border-color: rgba(96, 165, 250, 0.28); background: linear-gradient(180deg, rgba(96, 165, 250, 0.10), rgba(96, 165, 250, 0.04)); }
+.btn-sch:hover { background: rgba(96, 165, 250, 0.18); border-color: rgba(96, 165, 250, 0.5); color: #fff; }
 
-/* ── PUMP & WATER INFRASTRUCTURE CARD ── */
+/* ── INFRASTRUCTURE CARD ── */
 .infra-card {
-  background: rgba(18, 24, 38, 0.7);
-  backdrop-filter: blur(12px);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  padding: 18px 20px;
-  box-shadow: var(--shadow);
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-md);
+  box-shadow: var(--shadow); padding: 20px 20px 22px;
 }
-.infra-head {
-  display: flex; align-items: center; justify-content: space-between;
-  margin-bottom: 16px; padding-bottom: 10px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+.infra-head { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin-bottom: 18px; }
+.infra-title { font-size: 14px; font-weight: 650; letter-spacing: -0.01em; display: flex; align-items: center; gap: 9px; }
+.infra-title > span:first-child {
+  width: 26px; height: 26px; border-radius: 8px; display: grid; place-items: center; font-size: 13px;
+  background: var(--cyan-glow); border: 1px solid rgba(96, 165, 250, 0.26);
 }
-.infra-title {
-  font-family: 'Orbitron', sans-serif; font-size: 13px; font-weight: 700;
-  letter-spacing: 1px; color: var(--cyan); display: flex; align-items: center; gap: 8px;
-}
-.tanks-grid {
-  display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-  gap: 16px; margin-bottom: 16px;
-}
+
+/* ── TANKS ── */
+.tanks-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
 .tank-box {
-  background: rgba(10, 15, 26, 0.6);
-  border: 1px solid rgba(56, 189, 248, 0.12);
-  border-radius: var(--radius-md);
-  padding: 14px; display: flex; align-items: center; gap: 16px;
+  display: flex; gap: 16px; align-items: center; padding: 16px; background: var(--field);
+  border: 1px solid var(--border); border-radius: var(--radius-md);
 }
 .tank-visual {
-  width: 70px; height: 105px; border-radius: 12px;
-  border: 2px solid var(--border-active);
-  position: relative; overflow: hidden;
-  background: #0f172a; flex-shrink: 0;
-  box-shadow: inset 0 0 12px rgba(0,0,0,0.8);
+  position: relative; width: 66px; height: 104px; flex: none; border-radius: 12px; overflow: hidden;
+  background: #0b1424; border: 1px solid var(--border-strong);
 }
 .tank-water {
-  position: absolute; bottom: 0; left: 0; right: 0;
-  background: linear-gradient(180deg, rgba(56, 189, 248, 0.8), rgba(2, 132, 199, 0.95));
-  height: 20%; transition: height 0.3s ease-out;
-  box-shadow: 0 0 15px var(--water);
+  position: absolute; left: 0; right: 0; bottom: 0; height: 0%;
+  background: linear-gradient(180deg, #3b82f6, #1d4ed8); transition: height 0.7s cubic-bezier(0.22, 0.61, 0.36, 1);
 }
-.tank-water::after {
-  content: ''; position: absolute; top: -4px; left: 0; right: 0; height: 6px;
-  background: rgba(255, 255, 255, 0.35); border-radius: 50%;
-}
+.tank-water::after { content: ""; position: absolute; top: 0; left: 0; right: 0; height: 2px; background: rgba(191, 219, 254, 0.7); }
 .float-marker {
-  position: absolute; right: 4px; padding: 2px 4px;
-  font-size: 9px; font-family: 'Orbitron', monospace; font-weight: 700;
-  border-radius: 4px; z-index: 5;
+  position: absolute; top: 8px; left: 50%; transform: translateX(-50%); z-index: 2; font-size: 9px; font-weight: 700;
+  letter-spacing: 0.05em; padding: 3px 7px; border-radius: 999px; background: rgba(15, 23, 42, 0.9);
+  border: 1px solid var(--border-strong); color: var(--text-muted);
 }
-.float-marker.high { top: 12px; }
-.float-marker.low { bottom: 18px; }
-.float-marker.wet { background: var(--emerald); color: #000; box-shadow: 0 0 8px var(--emerald); }
-.float-marker.dry { background: #334155; color: #94a3b8; }
-
-.tank-info { flex: 1; }
-.tank-name { font-size: 13px; font-weight: 600; color: #fff; margin-bottom: 4px; }
-.tank-status {
-  font-family: 'Orbitron', monospace; font-size: 11px; font-weight: 700;
-  color: var(--cyan); margin-bottom: 8px;
+.float-marker.wet { color: var(--cyan); border-color: rgba(96, 165, 250, 0.5); background: rgba(37, 99, 235, 0.22); }
+.float-marker.dry { color: var(--amber); border-color: rgba(251, 191, 36, 0.42); }
+.tank-info { flex: 1; min-width: 0; }
+.tank-name { font-size: 13.5px; font-weight: 650; }
+.tank-status { font-size: 24px; font-weight: 700; letter-spacing: -0.03em; color: var(--cyan); font-variant-numeric: tabular-nums; margin: 2px 0 10px; }
+.tank-status.low { color: var(--amber); }
+.sensor-chips { display: flex; flex-direction: column; gap: 4px; }
+.sensor-row { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; font-size: 11.5px; color: var(--text-dim); white-space: nowrap; }
+.sensor-row span:last-child { font-weight: 600; color: var(--text-muted); font-variant-numeric: tabular-nums; text-align: right; }
+.lvl-pins { display: flex; gap: 5px; margin-top: 8px; flex-wrap: wrap; }
+.lvl-note { font-size: 9.5px; color: var(--text-dim); margin-top: 7px; letter-spacing: 0.02em; }
+.lvl-pin {
+  font-family: var(--mono); font-size: 10px; padding: 3px 7px; border-radius: 6px; color: var(--text-dim);
+  background: var(--glass); border: 1px solid var(--border); transition: color 0.2s, background 0.2s, border-color 0.2s;
 }
-.sensor-chips { display: flex; flex-direction: column; gap: 4px; font-size: 11px; }
-.sensor-row { display: flex; align-items: center; justify-content: space-between; color: var(--text-muted); }
-.sensor-row span:last-child { font-weight: 600; }
-.lvl-pins { display: flex; gap: 5px; margin-top: 7px; flex-wrap: wrap; }
-.lvl-pin { font-family: 'Orbitron', monospace; font-size: 9px; padding: 2px 6px; border-radius: 4px; border: 1px solid rgba(148,163,184,.28); color: var(--text-dim); }
-.lvl-pin.wet { color: var(--cyan); border-color: rgba(34,211,238,.5); background: rgba(34,211,238,.12); }
+.lvl-pin.wet { color: #bfdbfe; border-color: rgba(96, 165, 250, 0.5); background: rgba(37, 99, 235, 0.22); }
 
 /* ── PUMP CONTROLLERS ── */
-.pumps-grid {
-  display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: 14px;
-}
-.pump-card {
-  background: rgba(10, 15, 26, 0.6);
-  border: 1px solid var(--border); border-radius: var(--radius-md);
-  padding: 14px 16px;
-}
-.pump-header {
-  display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;
-}
-.pump-title {
-  font-size: 13px; font-weight: 700; color: #fff; display: flex; align-items: center; gap: 6px;
-}
+.main-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; align-items: start; }
+.pumps-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 14px; }
+.pump-card { padding: 16px; background: var(--field); border: 1px solid var(--border); border-radius: var(--radius-md); }
+.pump-header { display: flex; align-items: center; justify-content: space-between; gap: 6px 8px; margin-bottom: 14px; flex-wrap: wrap; }
+.pump-title { font-size: 12px; font-weight: 650; color: var(--text-muted); display: flex; align-items: center; gap: 5px; min-width: 0; white-space: nowrap; }
+.pump-title > span:first-child { flex-shrink: 0; }
+.pump-gpio { font-family: var(--mono); font-size: 9px; padding: 2px 4px; border-radius: 5px; color: var(--cyan); background: var(--cyan-glow); border: 1px solid rgba(96, 165, 250, 0.26); flex-shrink: 0; }
 .pump-state-badge {
-  font-family: 'Orbitron', monospace; font-size: 10px; font-weight: 700;
-  padding: 3px 8px; border-radius: 12px;
+  font-size: 10.5px; font-weight: 700; letter-spacing: 0.04em; padding: 4px 9px; border-radius: 999px; white-space: nowrap;
+  background: var(--glass); border: 1px solid var(--border); color: var(--text-dim);
 }
-.pump-state-badge.active { background: var(--emerald-bg); color: var(--emerald); border: 1px solid var(--emerald); }
-.pump-state-badge.idle { background: rgba(51, 65, 85, 0.5); color: #94a3b8; }
-
+.pump-state-badge.idle { color: var(--text-dim); }
+.pump-state-badge.active { color: var(--cyan); background: var(--cyan-glow); border-color: rgba(96, 165, 250, 0.4); }
+.pump-state-badge.running { color: var(--emerald); background: var(--emerald-bg); border-color: rgba(52, 211, 153, 0.4); }
 .pump-modes {
-  display: flex; gap: 4px; margin-bottom: 12px; background: #0b111e;
-  padding: 3px; border-radius: var(--radius-sm); border: 1px solid var(--border);
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 2px; padding: 3px; border-radius: 10px;
+  background: #0b1424; border: 1px solid var(--border);
 }
 .pm-btn {
-  flex: 1; padding: 6px; border: none; background: transparent;
-  color: var(--text-dim); font-size: 11px; font-weight: 700; border-radius: 6px;
-  cursor: pointer; transition: all 0.2s; font-family: 'Rajdhani', sans-serif;
+  height: 32px; border: 0; border-radius: 7px; background: transparent; color: var(--text-dim);
+  font-size: 11px; font-weight: 650; letter-spacing: 0.02em; transition: background 0.16s, color 0.16s;
 }
-.pm-btn.active {
-  background: var(--cyan); color: #000; box-shadow: 0 0 10px var(--cyan-glow);
-}
-.pump-telemetry {
-  display: flex; justify-content: space-between; font-size: 11px; color: var(--text-dim);
-}
-.pump-telemetry b { color: var(--text-muted); font-family: 'Orbitron', monospace; font-size: 10px; }
+.pm-btn:hover { color: var(--text-muted); }
+.pm-btn.active { background: linear-gradient(180deg, #3b82f6, #2563eb); color: #fff; box-shadow: 0 2px 8px -3px rgba(37, 99, 235, 0.9); }
+.pump-telemetry { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 12px; font-size: 11.5px; color: var(--text-dim); }
+.pump-telemetry b { color: var(--text-muted); font-variant-numeric: tabular-nums; font-weight: 650; }
 
-/* ── PUMP CONTROLLERS ── */
-.main-cols {
-  display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: start;
-}
-.section-title {
-  font-family: 'Orbitron', sans-serif; font-size: 13px; font-weight: 700;
-  letter-spacing: 1.5px; color: var(--text-muted); text-transform: uppercase;
-  margin-top: 10px; margin-bottom: 2px;
-}
-.app-grid {
-  display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-  gap: 12px;
-}
-
-/* ── MOBILE RESPONSIVE ── */
-@media (max-width: 900px) {
-  .main-cols { grid-template-columns: 1fr; }
-}
-@media (max-width: 640px) {
-  .navbar { padding: 10px 12px; flex-wrap: wrap; gap: 8px; }
-  .nav-titles h1 { font-size: 12px; }
-  .nav-titles p { font-size: 9px; }
-  .nav-badges { gap: 5px; }
-  .badge { padding: 4px 7px; font-size: 10px; }
-  .container { padding: 12px 10px 32px; gap: 14px; }
-  .quick-strip { gap: 8px; }
-  .action-btn { min-width: 100%; }
-  .infra-card { padding: 14px 12px; }
-  .tanks-grid { grid-template-columns: 1fr; gap: 12px; }
-  .tank-visual { width: 56px; height: 88px; }
-  .pumps-grid { grid-template-columns: 1fr; }
-  .app-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
-  .app-card { min-height: 112px; padding: 11px; }
-  .app-name { font-size: 12px; }
-  .section-title { font-size: 11px; }
-}
+/* ── APPLIANCE GRID ── */
+.app-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(228px, 1fr)); gap: 14px; }
 .app-card {
-  background: rgba(18, 24, 38, 0.7);
-  backdrop-filter: blur(12px);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  padding: 14px;
-  display: flex; flex-direction: column; justify-content: space-between;
-  min-height: 125px; cursor: pointer; position: relative; overflow: hidden;
-  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-  box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+  position: relative; display: flex; flex-direction: column; gap: 14px; padding: 16px; cursor: pointer;
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm); transition: border-color 0.18s, background 0.18s, transform 0.08s;
 }
+.app-card:hover { border-color: var(--border-strong); background: var(--surface-hover); }
+.app-card:active { transform: translateY(1px); }
 .app-card::before {
-  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
-  background: linear-gradient(90deg, transparent, var(--border), transparent);
-  transition: all 0.3s;
+  content: ""; position: absolute; left: 0; top: 14px; bottom: 14px; width: 3px; border-radius: 0 3px 3px 0;
+  background: transparent; transition: background 0.2s;
 }
-.app-card:hover {
-  transform: translateY(-2px); border-color: var(--border-active);
-  box-shadow: 0 8px 24px rgba(0,0,0,0.4), 0 0 16px rgba(6, 182, 212, 0.1);
-}
-.app-card.is-on {
-  border-color: rgba(16, 185, 129, 0.45);
-  background: linear-gradient(145deg, rgba(18, 24, 38, 0.85), rgba(16, 185, 129, 0.08));
-  box-shadow: 0 0 20px rgba(16, 185, 129, 0.15);
-}
-.app-card.is-on::before {
-  background: linear-gradient(90deg, transparent, var(--emerald), transparent);
-}
-.app-card-top {
-  display: flex; align-items: flex-start; justify-content: space-between;
-}
+.app-card.is-on::before { background: var(--water); }
+.app-card.is-on { border-color: rgba(96, 165, 250, 0.34); background: linear-gradient(180deg, rgba(37, 99, 235, 0.10), var(--surface) 62%); }
+.app-card-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
 .app-icon-wrap {
-  width: 38px; height: 38px; border-radius: 10px;
-  background: rgba(30, 41, 59, 0.6); border: 1px solid var(--border);
-  display: flex; align-items: center; justify-content: center;
-  font-size: 18px;
+  width: 40px; height: 40px; border-radius: 11px; display: grid; place-items: center; font-size: 18px;
+  background: var(--glass); border: 1px solid var(--border); transition: background 0.2s, border-color 0.2s;
 }
-.app-card.is-on .app-icon-wrap {
-  background: var(--emerald-bg); border-color: rgba(16, 185, 129, 0.4);
-  box-shadow: 0 0 12px var(--emerald-glow);
+.app-card.is-on .app-icon-wrap { background: var(--cyan-glow); border-color: rgba(96, 165, 250, 0.4); }
+.app-ch { font-family: var(--mono); font-size: 10px; font-weight: 600; color: var(--text-dim); letter-spacing: 0.04em; }
+.app-info { min-width: 0; }
+.app-name { font-size: 14px; font-weight: 650; letter-spacing: -0.01em; }
+.app-desc { font-size: 11.5px; color: var(--text-dim); margin-top: 1px; }
+.app-gpio {
+  display: inline-block; margin-top: 8px; font-family: var(--mono); font-size: 10px; padding: 2px 7px; border-radius: 6px;
+  color: var(--text-muted); background: var(--glass); border: 1px solid var(--border);
 }
-.app-ch {
-  font-family: 'Orbitron', monospace; font-size: 9px; font-weight: 700;
-  color: var(--text-dim); padding: 2px 6px; border-radius: 4px;
-  background: rgba(0, 0, 0, 0.3); border: 1px solid var(--border);
-}
-.app-info { margin: 8px 0; }
-.app-name {
-  font-family: 'Rajdhani', sans-serif; font-size: 14px; font-weight: 700;
-  letter-spacing: 0.8px; text-transform: uppercase; color: #fff;
-}
-.app-desc { font-size: 10px; color: var(--text-dim); }
-.app-gpio { display: inline-block; margin-top: 5px; font-family: 'Orbitron', monospace; font-size: 9px; letter-spacing: .5px; color: var(--cyan); background: rgba(34,211,238,.10); border: 1px solid rgba(34,211,238,.28); border-radius: 4px; padding: 1px 6px; }
-.pump-gpio { font-family: 'Orbitron', monospace; font-size: 9px; color: var(--cyan); background: rgba(34,211,238,.10); border: 1px solid rgba(34,211,238,.28); border-radius: 4px; padding: 1px 6px; margin-left: 6px; }
-
-.app-card-bottom {
-  display: flex; align-items: center; justify-content: space-between; margin-top: auto;
-}
-.app-state-text {
-  font-family: 'Orbitron', monospace; font-size: 10px; font-weight: 700;
-  letter-spacing: 1px; color: var(--crimson);
-}
-.app-card.is-on .app-state-text { color: var(--emerald); }
-
-.app-toggle-btn {
-  padding: 5px 12px; border-radius: var(--radius-sm); border: 1px solid;
-  font-family: 'Rajdhani', sans-serif; font-size: 11px; font-weight: 700;
-  letter-spacing: 1px; text-transform: uppercase; cursor: pointer; transition: all 0.2s;
-}
-.app-toggle-btn.off {
-  background: var(--emerald-bg); border-color: rgba(16, 185, 129, 0.4); color: var(--emerald);
-}
-.app-toggle-btn.on {
-  background: var(--crimson-bg); border-color: rgba(239, 68, 68, 0.4); color: var(--crimson);
-}
+.app-card-bottom { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.app-state-text { font-size: 11px; font-weight: 700; letter-spacing: 0.05em; color: var(--text-dim); }
+.app-card.is-on .app-state-text { color: var(--cyan); }
 .app-btn-row { display: flex; align-items: center; gap: 6px; }
 .app-sch-btn {
-  background: rgba(6, 182, 212, 0.10); border: 1px solid rgba(6, 182, 212, 0.35);
-  color: var(--cyan); border-radius: var(--radius-sm); padding: 4px 8px;
-  font-size: 12px; cursor: pointer; transition: all 0.2s;
+  width: 30px; height: 30px; border-radius: 8px; font-size: 13px; display: grid; place-items: center;
+  background: var(--glass); border: 1px solid var(--border); color: var(--text-muted);
 }
-.app-sch-btn:hover { background: rgba(6, 182, 212, 0.25); }
+.app-sch-btn:hover { border-color: rgba(96, 165, 250, 0.4); color: var(--cyan); background: var(--cyan-glow); }
+.app-toggle-btn {
+  height: 30px; padding: 0 12px; border-radius: 8px; font-size: 11px; font-weight: 650; letter-spacing: 0.02em;
+  transition: background 0.16s, border-color 0.16s, color 0.16s;
+}
+.app-toggle-btn.off { background: linear-gradient(180deg, #3b82f6, #2563eb); border: 1px solid #2563eb; color: #fff; }
+.app-toggle-btn.off:hover { filter: brightness(1.1); }
+.app-toggle-btn.on { background: var(--glass); border: 1px solid var(--border-strong); color: var(--text-muted); }
+.app-toggle-btn.on:hover { border-color: rgba(248, 113, 113, 0.45); color: var(--crimson); background: var(--crimson-bg); }
 
-/* ── SCHEDULE MANAGER ── */
-.sch-row {
-  display: flex; align-items: center; justify-content: space-between; gap: 10px;
-  background: #090d16; border: 1px solid var(--border); border-radius: var(--radius-sm);
-  padding: 9px 12px; margin-bottom: 7px;
-}
-.sch-row-main { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
-.sch-row-name { font-size: 13px; font-weight: 700; color: #fff; }
-.sch-row-meta { font-size: 11px; color: var(--text-muted); letter-spacing: .4px; }
-.sch-row-act { font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 6px; }
-.sch-row-act.on { background: var(--emerald-bg); color: var(--emerald); }
-.sch-row-act.off { background: var(--crimson-bg); color: var(--crimson); }
-.sch-del-btn {
-  background: rgba(239, 68, 68, 0.12); border: 1px solid rgba(239, 68, 68, 0.35);
-  color: var(--crimson); border-radius: 6px; padding: 5px 9px; font-size: 11px;
-  font-weight: 700; cursor: pointer;
-}
-.sch-del-btn:hover { background: rgba(239, 68, 68, 0.28); }
-.sch-empty { font-size: 12px; color: var(--text-dim); text-align: center; padding: 12px 0; }
-.sch-list-wrap { max-height: 190px; overflow-y: auto; }
-.tg-user-row {
-  display: flex; align-items: center; justify-content: space-between; gap: 10px;
-  background: #090d16; border: 1px solid var(--border); border-radius: var(--radius-sm);
-  padding: 8px 12px; margin-bottom: 6px; font-size: 12px; color: #e0e0e0;
-  font-family: 'SF Mono', 'Fira Code', monospace;
-}
-
-/* ── SCHEDULE MODAL ── */
+/* ── MODALS ── */
 .modal-overlay {
-  display: none; position: fixed; inset: 0; z-index: 500;
-  background: rgba(0, 0, 0, 0.65); backdrop-filter: blur(8px);
-  align-items: center; justify-content: center; padding: 16px;
+  position: fixed; inset: 0; z-index: 60; display: none; align-items: center; justify-content: center; padding: 20px;
+  background: rgba(6, 10, 20, 0.72); backdrop-filter: blur(3px);
 }
 .modal-overlay.open { display: flex; }
 .modal-box {
-  width: 100%; max-width: 500px; max-height: 85vh;
-  background: #111827; border: 1px solid var(--border-active);
-  border-radius: var(--radius-lg); box-shadow: 0 10px 40px rgba(0,0,0,0.8);
-  display: flex; flex-direction: column; overflow: hidden; animation: zoomIn 0.25s ease-out;
+  width: 100%; max-width: 540px; max-height: 88vh; display: flex; flex-direction: column;
+  background: var(--surface); border: 1px solid var(--border-strong); border-radius: var(--radius-lg); box-shadow: var(--shadow-lg);
+  animation: modalIn 0.18s cubic-bezier(0.2, 0.7, 0.3, 1);
 }
-@keyframes zoomIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+@keyframes modalIn { from { opacity: 0; transform: translateY(8px) scale(0.99); } to { opacity: 1; transform: none; } }
 .modal-head {
-  padding: 16px 20px; border-bottom: 1px solid var(--border);
-  display: flex; align-items: center; justify-content: space-between;
+  display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 16px 18px;
+  border-bottom: 1px solid var(--border);
 }
-.modal-head h3 {
-  font-family: 'Orbitron', sans-serif; font-size: 14px; font-weight: 700;
-  letter-spacing: 1px; color: var(--cyan);
-}
+.modal-head h3 { font-size: 14px; font-weight: 650; letter-spacing: -0.01em; }
 .modal-close {
-  background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.3);
-  color: var(--crimson); padding: 4px 8px; border-radius: 6px; cursor: pointer;
+  width: 28px; height: 28px; border-radius: 8px; background: var(--glass); border: 1px solid var(--border);
+  color: var(--text-muted); font-size: 13px; line-height: 1;
 }
-.modal-body {
-  padding: 16px 20px; overflow-y: auto; flex: 1; display: flex; flex-direction: column; gap: 14px;
-}
-
-.sch-item {
-  background: rgba(18, 24, 38, 0.8); border: 1px solid var(--border);
-  border-radius: var(--radius-sm); padding: 10px 12px;
-  display: flex; align-items: center; justify-content: space-between;
-}
-.sch-badge {
-  font-size: 9px; font-weight: 700; padding: 2px 6px; border-radius: 4px;
-  margin-right: 8px;
-}
-.sch-badge.on { background: var(--emerald-bg); color: var(--emerald); }
-.sch-badge.off { background: var(--crimson-bg); color: var(--crimson); }
-.sch-del-btn {
-  background: var(--crimson-bg); border: 1px solid rgba(239, 68, 68, 0.3);
-  color: var(--crimson); padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 11px;
-}
-
-.form-group { display: flex; flex-direction: column; gap: 6px; }
-.form-group label {
-  font-size: 11px; font-weight: 600; color: var(--text-muted); text-transform: uppercase;
-}
-.form-group input, .form-group select {
-  background: #090d16; border: 1.5px solid var(--border);
-  border-radius: var(--radius-sm); padding: 9px 12px; color: #fff; outline: none; font-size: 13px;
-}
-.form-group input:focus, .form-group select:focus { border-color: var(--cyan); }
+.modal-close:hover { background: var(--crimson-bg); border-color: rgba(248, 113, 113, 0.4); color: var(--crimson); }
+.modal-body { padding: 18px; overflow-y: auto; display: flex; flex-direction: column; gap: 14px; }
 .modal-foot {
-  padding: 14px 20px; border-top: 1px solid var(--border);
-  display: flex; justify-content: flex-end; gap: 10px;
+  display: flex; justify-content: flex-end; gap: 8px; padding: 14px 18px; border-top: 1px solid var(--border);
+  background: rgba(10, 16, 30, 0.5); border-radius: 0 0 var(--radius-lg) var(--radius-lg);
 }
 .modal-btn {
-  padding: 9px 16px; border-radius: var(--radius-sm); border: none;
-  font-weight: 600; font-size: 12px; cursor: pointer;
+  height: 36px; padding: 0 15px; border-radius: var(--radius-sm); font-size: 12.5px; font-weight: 600;
+  border: 1px solid var(--border-strong); background: var(--glass); color: var(--text-muted);
 }
-.modal-btn.primary {
-  background: var(--cyan); color: #000; box-shadow: 0 0 12px var(--cyan-glow);
+.modal-btn:hover { background: var(--surface-hover); color: #fff; }
+.modal-btn.primary { background: linear-gradient(180deg, #3b82f6, #2563eb); border-color: #2563eb; color: #fff; box-shadow: 0 5px 14px -8px rgba(37, 99, 235, 0.95); }
+.modal-btn.primary:hover { filter: brightness(1.08); }
+.modal-btn.secondary { background: transparent; }
+.form-group { display: flex; flex-direction: column; gap: 6px; }
+.form-group label { font-size: 11.5px; font-weight: 650; letter-spacing: 0.03em; text-transform: uppercase; color: var(--text-dim); }
+.form-group input, .form-group select, .form-group textarea {
+  width: 100%; height: 40px; padding: 0 12px; background: var(--field); border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm); font-size: 13px; transition: border-color 0.16s, box-shadow 0.16s;
 }
-.modal-btn.secondary { background: #1e293b; color: #cbd5e1; }
+.form-group textarea { height: auto; padding: 10px 12px; line-height: 1.5; resize: vertical; }
+.form-group select { appearance: none; background-image: linear-gradient(45deg, transparent 50%, var(--text-muted) 50%), linear-gradient(135deg, var(--text-muted) 50%, transparent 50%); background-position: calc(100% - 16px) 18px, calc(100% - 11px) 18px; background-size: 5px 5px; background-repeat: no-repeat; }
+.form-group input:focus, .form-group select:focus, .form-group textarea:focus { outline: none; border-color: var(--cyan); box-shadow: var(--ring); }
+.form-group small { font-size: 11px; color: var(--text-dim); line-height: 1.55; }
 
-/* ── TOAST ── */
-#toastContainer {
-  position: fixed; bottom: 20px; right: 20px; z-index: 2000;
-  display: flex; flex-direction: column; gap: 8px; pointer-events: none;
-}
-.toast {
-  background: #111827; border: 1px solid var(--border-active);
-  border-radius: var(--radius-sm); padding: 10px 16px;
-  font-size: 13px; font-weight: 500; color: #fff;
-  box-shadow: 0 10px 25px rgba(0,0,0,0.6);
-  animation: slideInRight 0.3s ease-out;
-  display: flex; align-items: center; gap: 8px;
-}
-@keyframes slideInRight { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
-@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-
-/* ── DRUM ROLL PICKER ── */
+/* ── DRUM PICKER ── */
 .drum-picker-wrap {
-  position: relative; display: flex; align-items: center; justify-content: center;
-  gap: 0; height: 150px; overflow: hidden;
-  background: var(--glass); border: 1px solid var(--border); border-radius: 14px;
-  user-select: none;
+  position: relative; display: flex; align-items: center; gap: 6px; padding: 8px 10px; border-radius: var(--radius-md);
+  background: var(--field); border: 1px solid var(--border);
 }
 .drum-picker-highlight {
-  position: absolute; top: 50%; left: 0; right: 0;
-  height: 42px; transform: translateY(-50%);
-  background: rgba(6,182,212,.10);
-  border-top: 1px solid var(--cyan); border-bottom: 1px solid var(--cyan);
-  border-radius: 4px; pointer-events: none; z-index: 2;
+  position: absolute; left: 10px; right: 10px; top: 50%; transform: translateY(-50%); height: 34px; pointer-events: none;
+  border-radius: 8px; background: rgba(37, 99, 235, 0.16); border: 1px solid rgba(96, 165, 250, 0.32);
 }
 .drum-col {
-  flex: 1; height: 100%; overflow-y: scroll; scroll-snap-type: y mandatory;
-  scrollbar-width: none; -ms-overflow-style: none;
-  display: flex; flex-direction: column; align-items: center;
-  padding: 54px 0; box-sizing: border-box;
+  position: relative; flex: 1; height: 128px; overflow-y: auto; scroll-snap-type: y mandatory; scrollbar-width: none;
+  -webkit-mask-image: linear-gradient(180deg, transparent, #000 26%, #000 74%, transparent);
 }
 .drum-col::-webkit-scrollbar { display: none; }
 .drum-item {
-  flex-shrink: 0; height: 42px; min-height: 42px; width: 100%;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 22px; font-weight: 700; font-family: 'SF Mono', 'Fira Code', monospace;
-  color: var(--text-dim); scroll-snap-align: center; cursor: pointer;
-  transition: color .15s, transform .15s;
+  scroll-snap-align: center; height: 32px; display: grid; place-items: center; font-size: 14px; font-weight: 600;
+  color: var(--text-dim); font-variant-numeric: tabular-nums; cursor: pointer;
 }
-.drum-item.selected {
-  color: var(--cyan); transform: scale(1.15);
+.drum-item.selected { color: #fff; font-weight: 700; }
+.drum-sep { font-size: 16px; font-weight: 700; color: var(--text-dim); z-index: 1; }
+
+/* ── SCHEDULE + USER ROWS ── */
+.sch-list-wrap { display: flex; flex-direction: column; gap: 8px; max-height: 240px; overflow-y: auto; padding-right: 2px; }
+.sch-empty { font-size: 12px; color: var(--text-dim); padding: 14px; text-align: center; background: var(--glass); border: 1px dashed var(--border-strong); border-radius: var(--radius-sm); }
+.sch-row {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 11px 13px;
+  background: var(--field); border: 1px solid var(--border); border-radius: var(--radius-sm);
 }
-.drum-sep {
-  font-size: 26px; font-weight: 900; color: var(--cyan);
-  padding: 0 2px; flex-shrink: 0; align-self: center; z-index: 3;
-  text-shadow: 0 0 10px var(--cyan);
+.sch-row-main { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.sch-row-name { font-size: 12.5px; font-weight: 650; }
+.sch-row-meta { font-size: 11px; color: var(--text-dim); font-variant-numeric: tabular-nums; }
+.sch-row-act { font-size: 10px; font-weight: 700; letter-spacing: 0.05em; padding: 3px 8px; border-radius: 999px; }
+.sch-row-act.on { color: var(--emerald); background: var(--emerald-bg); border: 1px solid rgba(52, 211, 153, 0.32); }
+.sch-row-act.off { color: var(--text-dim); background: var(--glass); border: 1px solid var(--border); }
+.sch-del-btn {
+  width: 26px; height: 26px; flex: none; border-radius: 7px; font-size: 12px; display: grid; place-items: center;
+  background: transparent; border: 1px solid var(--border); color: var(--text-dim);
 }
+.sch-del-btn:hover { color: var(--crimson); border-color: rgba(248, 113, 113, 0.4); background: var(--crimson-bg); }
+.tg-user-row {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 12px; font-size: 12.5px;
+  background: var(--field); border: 1px solid var(--border); border-radius: var(--radius-sm); font-family: var(--mono);
+}
+
+/* ── TOAST ── */
+#toastContainer { position: fixed; right: 18px; bottom: 18px; z-index: 90; display: flex; flex-direction: column; gap: 8px; align-items: flex-end; }
+.toast {
+  display: flex; align-items: center; gap: 9px; padding: 10px 14px; font-size: 12.5px; font-weight: 550;
+  background: var(--surface-solid); border: 1px solid var(--border-strong); border-radius: 999px; box-shadow: var(--shadow);
+  animation: toastIn 0.22s cubic-bezier(0.2, 0.7, 0.3, 1);
+}
+@keyframes toastIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+
+
+/* ── SETTINGS FURNITURE ── */
+.sub-head { display: flex; align-items: center; gap: 7px; font-size: 11px; font-weight: 650; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-dim); margin-bottom: 2px; }
+.ghost-btn { height: 34px; padding: 0 13px; border-radius: 8px; background: var(--glass); border: 1px solid var(--border-strong); color: var(--text-muted); font-size: 12px; font-weight: 600; }
+.ghost-btn:hover { background: var(--surface-hover); color: #fff; }
+.ghost-btn.accent { color: var(--cyan); border-color: rgba(96, 165, 250, 0.4); background: var(--cyan-glow); }
+.ghost-btn.accent:hover { background: rgba(96, 165, 250, 0.24); color: #fff; }
+.ghost-btn.block { width: 100%; height: 38px; margin-top: 2px; }
+.cfg-textarea { width: 100%; background: var(--field); border: 1px solid var(--border-strong); border-radius: var(--radius-sm); color: var(--text); padding: 10px 12px; font-size: 13px; line-height: 1.5; resize: vertical; outline: none; font-family: inherit; box-sizing: border-box; }
+.cfg-textarea:focus { border-color: var(--cyan); box-shadow: var(--ring); }
+.dev-info { font-size: 11.5px; line-height: 1.7; color: var(--text-muted); background: var(--field); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 10px 12px; font-variant-numeric: tabular-nums; }
+#toastContainer { pointer-events: none; }
+
+/* ── RESPONSIVE ── */
+@media (max-width: 900px) {
+  .main-cols, .tanks-grid, .pumps-grid { grid-template-columns: 1fr; }
+  .navbar { flex-wrap: wrap; padding: 12px 16px; }
+  .nav-badges { order: 3; width: 100%; }
+}
+@media (max-width: 640px) {
+  .container { padding: 16px 14px 40px; gap: 14px; }
+  .app-grid { grid-template-columns: 1fr 1fr; gap: 10px; }
+  .action-btn { min-width: 100%; }
+  .infra-card { padding: 15px 13px; }
+  .tank-box { padding: 13px; gap: 12px; }
+  .tank-visual { width: 56px; height: 88px; }
+  .tank-status { font-size: 20px; }
+  .app-card { padding: 13px; gap: 10px; }
+  .app-icon-wrap { width: 34px; height: 34px; font-size: 16px; }
+  .app-name { font-size: 12.5px; }
+  .app-desc { font-size: 10.5px; }
+  .modal-box { max-height: 92vh; }
+}
+@media (max-width: 400px) { .app-grid { grid-template-columns: 1fr; } }
 </style>
 </head>
 <body>
@@ -608,14 +439,14 @@ body {
 <div id="loginView">
   <div class="login-card">
     <div class="villa-icon">🏡</div>
-    <div class="login-title">ZYREX SMART VILLA</div>
+    <div class="login-title">Zyrex Smart Villa</div>
     <div class="login-subtitle">Modern House Automation</div>
     <div class="pw-field">
       <input type="password" id="pwInput" placeholder="Enter security key…" autocomplete="current-password">
       <button class="pw-toggle" id="pwEye">👁</button>
     </div>
-    <button class="login-btn" id="loginSubmit">AUTHENTICATE</button>
-    <div class="login-err" id="loginErr">⛔ Access Denied: Invalid Security Key</div>
+    <button class="login-btn" id="loginSubmit">Sign in</button>
+    <div class="login-err" id="loginErr">Access denied — that key is not recognised</div>
     <div id="loginNote" style="margin-top:10px;font-size:10px;line-height:1.6;color:var(--text-dim);text-align:center;"></div>
   </div>
 </div>
@@ -626,16 +457,16 @@ body {
     <div class="nav-brand">
       <div class="nav-logo">⚡</div>
       <div class="nav-titles">
-        <h1>ZYREX RESIDENCE</h1>
+        <h1>Zyrex Residence</h1>
         <p>Smart Automation Hub</p>
       </div>
     </div>
     <div class="nav-badges">
       <div class="badge" title="Ping / Speed">
-        <span>📶</span> <span id="netSpeed" style="font-family:'Orbitron',monospace;color:var(--cyan)">--</span> <span style="font-size:9px">Mbps</span>
+        <span>📶</span> <span id="netSpeed" style="font-family:var(--mono);color:var(--cyan)">--</span> <span style="font-size:9px">Mbps</span>
       </div>
       <div class="badge" id="clockBadge" title="ESP32 internal clock — schedules only fire when this is synced">
-        <span>🕒</span> <span id="clockText" style="font-family:'Orbitron',monospace;color:var(--text-muted)">--:--</span>
+        <span>🕒</span> <span id="clockText" style="font-family:var(--mono);color:var(--text-muted)">--:--</span>
       </div>
       <div class="badge" id="espBadge" title="ESP32 Telemetry Status">
         <div class="badge-dot pulse" id="espDot"></div>
@@ -649,17 +480,17 @@ body {
     <div class="nav-actions">
       <button class="btn-icon" id="openTgAdminBtn" title="Telegram Access">👥</button>
       <button class="btn-icon" id="openSettingsBtn" title="System Settings">⚙</button>
-      <button class="btn-logout" id="logoutBtn">EXIT</button>
+      <button class="btn-logout" id="logoutBtn">Sign out</button>
     </div>
   </header>
 
   <main class="container">
     <!-- Quick Actions Strip -->
     <div class="quick-strip">
-      <button class="action-btn btn-all-on" onclick="masterLights(true)">💡 ALL LIGHTS ON</button>
-      <button class="action-btn btn-all-off" onclick="masterLights(false)">🌑 ALL LIGHTS OFF</button>
-      <button class="action-btn btn-sch" onclick="openScheduleModal()">⏱ PUMP TIMER</button>
-      <button class="action-btn btn-sch" onclick="openAutoScheduleModal()">📅 SCHEDULES</button>
+      <button class="action-btn btn-all-on" onclick="masterLights(true)">All lights on</button>
+      <button class="action-btn btn-all-off" onclick="masterLights(false)">All lights off</button>
+      <button class="action-btn btn-sch" onclick="openScheduleModal()">Pump timer</button>
+      <button class="action-btn btn-sch" onclick="openAutoScheduleModal()">Schedules</button>
     </div>
 
     <div class="main-cols">
@@ -667,9 +498,9 @@ body {
     <section class="infra-card">
       <div class="infra-head">
         <div class="infra-title">
-          <span>💧</span> DUAL-TANK &amp; PUMP AUTOMATION
+          <span>💧</span> Dual-tank &amp; pump automation
         </div>
-        <button class="btn-icon" onclick="openScheduleModal()">⏱ Timer</button>
+        <button class="ghost-btn" onclick="openScheduleModal()">🕒 Timer</button>
       </div>
 
       <!-- Water-Level Signal Visualizer -->
@@ -683,14 +514,14 @@ body {
             <div class="tank-name">Overhead Tank</div>
             <div class="tank-status" id="tankStatusText">HIGH</div>
             <div class="sensor-chips">
-              <div class="sensor-row"><span>Water Level Signal (GPIO 32):</span> <span id="lblTankSignal">HIGH</span></div>
-              <div class="sensor-row" style="margin-top:6px;"><span>Level float pins</span> <span style="font-weight:400;color:var(--text-dim)">25%·GPIO 26 · 50%·GPIO 27 · 75%·GPIO 14 · 100%·GPIO 32</span></div>
+              <div class="sensor-row"><span>100% float</span> <span id="lblTankSignal">HIGH</span></div>
               <div class="lvl-pins">
-                <span class="lvl-pin" id="lvlP25">GPIO 26</span>
-                <span class="lvl-pin" id="lvlP50">GPIO 27</span>
-                <span class="lvl-pin" id="lvlP75">GPIO 14</span>
-                <span class="lvl-pin" id="lvlP100">GPIO 32</span>
+                <span class="lvl-pin" id="lvlP25">25% · 26</span>
+                <span class="lvl-pin" id="lvlP50">50% · 27</span>
+                <span class="lvl-pin" id="lvlP75">75% · 14</span>
+                <span class="lvl-pin" id="lvlP100">100% · 32</span>
               </div>
+              <div class="lvl-note">Float GPIOs · lit = water at that level</div>
             </div>
           </div>
         </div>
@@ -704,8 +535,11 @@ body {
             <div class="tank-name">Ground Sump</div>
             <div class="tank-status" id="sumpStatusText">HIGH</div>
             <div class="sensor-chips">
-              <div class="sensor-row"><span>Water Level Signal (GPIO 25):</span> <span id="lblSumpSignal">HIGH</span></div>
-              <div class="sensor-row" style="margin-top:6px;"><span>Sump float pin</span> <span style="font-weight:400;color:var(--text-dim)">GPIO 25 — DRY blocks both pumps</span></div>
+              <div class="sensor-row"><span>Float signal</span> <span id="lblSumpSignal">HIGH</span></div>
+              <div class="lvl-pins" style="margin-top:6px;">
+                <span class="lvl-pin" id="lvlSump25">GPIO 25</span>
+              </div>
+              <div class="lvl-note">DRY blocks both pumps</div>
             </div>
           </div>
         </div>
@@ -716,12 +550,12 @@ body {
         <!-- Borewell Pump -->
         <div class="pump-card">
           <div class="pump-header">
-            <div class="pump-title"><span>🌊</span> BOREWELL PUMP<span class="pump-gpio">GPIO 23</span></div>
+            <div class="pump-title"><span>🌊</span> Borewell Pump<span class="pump-gpio">GPIO 23</span></div>
             <div class="pump-state-badge idle" id="boreBadge">STANDBY</div>
           </div>
           <div class="pump-modes">
             <button class="pm-btn active" id="bmAuto" onclick="setPumpMode('bore', 'auto')">AUTO</button>
-            <button class="pm-btn" id="bmOn" onclick="setPumpMode('bore', 'on')">MANUAL ON</button>
+            <button class="pm-btn" id="bmOn" onclick="setPumpMode('bore', 'on')" title="Manual — run continuously">ON</button>
             <button class="pm-btn" id="bmOff" onclick="setPumpMode('bore', 'off')">OFF</button>
           </div>
           <div class="pump-telemetry">
@@ -732,12 +566,12 @@ body {
         <!-- Sump Pump -->
         <div class="pump-card">
           <div class="pump-header">
-            <div class="pump-title"><span>💧</span> SUMP WATER PUMP<span class="pump-gpio">GPIO 19</span></div>
+            <div class="pump-title"><span>💧</span> Sump Water Pump<span class="pump-gpio">GPIO 19</span></div>
             <div class="pump-state-badge idle" id="sumpBadge">STANDBY</div>
           </div>
           <div class="pump-modes">
             <button class="pm-btn active" id="smAuto" onclick="setPumpMode('sump', 'auto')">AUTO</button>
-            <button class="pm-btn" id="smOn" onclick="setPumpMode('sump', 'on')">MANUAL ON</button>
+            <button class="pm-btn" id="smOn" onclick="setPumpMode('sump', 'on')" title="Manual — run continuously">ON</button>
             <button class="pm-btn" id="smOff" onclick="setPumpMode('sump', 'off')">OFF</button>
           </div>
           <div class="pump-telemetry">
@@ -749,7 +583,7 @@ body {
 
     <!-- 9 Smart Appliance Cards -->
     <div>
-      <div class="section-title">ALL APPLIANCES &amp; LOADS</div>
+      <div class="section-title">All appliances &amp; loads</div>
       <div class="app-grid" id="appGrid"></div>
     </div>
     </div>
@@ -760,7 +594,7 @@ body {
 <div class="modal-overlay" id="settingsModal">
   <div class="modal-box">
     <div class="modal-head">
-      <h3>⚙ SYSTEM CONFIGURATION</h3>
+      <h3>System configuration</h3>
       <button class="modal-close" onclick="closeSettingsModal()">✕</button>
     </div>
     <div class="modal-body">
@@ -789,9 +623,8 @@ body {
       </div>
 
       <hr style="border:none;border-top:1px solid var(--border);margin:14px 0 10px;">
-      <div style="font-size:12px;font-weight:700;color:var(--cyan);letter-spacing:.5px;margin-bottom:10px;">🔐 DEVICE LOGIN &amp; IDENTITY</div>
-      <div id="devInfoLine" style="font-size:10px;line-height:1.8;color:var(--text-dim);background:var(--glass);
-        border:1px solid var(--border);border-radius:8px;padding:8px 10px;margin-bottom:12px;">
+      <div class="sub-head">🔐 DEVICE LOGIN &amp; IDENTITY</div>
+      <div id="devInfoLine" class="dev-info">
         ⚠ No device report yet
       </div>
       <div class="form-group">
@@ -799,23 +632,20 @@ body {
         <div style="display:flex;gap:6px;align-items:center;">
           <input type="password" id="cfgCurPass" placeholder="current" style="flex:1;min-width:0;" autocomplete="off">
           <input type="password" id="cfgNewPass" placeholder="new" style="flex:1;min-width:0;" autocomplete="new-password">
-          <button onclick="changeDevicePass()" style="background:var(--glass);border:1px solid var(--cyan);
-            border-radius:8px;padding:7px 12px;cursor:pointer;font-size:11px;font-weight:700;color:var(--cyan);
-            white-space:nowrap;">SET</button>
+          <button onclick="changeDevicePass()" class="ghost-btn accent">Set</button>
         </div>
         <small style="font-size:10px;color:var(--text-dim);">Only hashes are sent over MQTT — the passcode itself never
           leaves this browser. The device confirms the change on Telegram. Serial command <code>p</code> resets it if you get locked out.</small>
       </div>
 
       <hr style="border:none;border-top:1px solid var(--border);margin:14px 0 10px;">
-      <div style="font-size:12px;font-weight:700;color:var(--cyan);letter-spacing:.5px;margin-bottom:10px;">🤖 TELEGRAM BOT</div>
+      <div class="sub-head">🤖 TELEGRAM BOT</div>
       <div class="form-group">
         <label>Bot API Token</label>
         <div style="display:flex;gap:6px;align-items:center;">
           <input type="password" id="cfgBotToken" placeholder="1234567890:AAH…your-token"
             style="flex:1;" autocomplete="off">
-          <button onclick="toggleTokenVis()" style="background:var(--glass);border:1px solid var(--border);
-            border-radius:8px;padding:6px 10px;cursor:pointer;font-size:14px;color:var(--text-muted);"
+          <button onclick="toggleTokenVis()" class="ghost-btn"
             id="tokenEyeBtn" title="Show/hide token">👁</button>
         </div>
         <small style="font-size:10px;color:var(--text-dim);">Get your token from @BotFather on Telegram.</small>
@@ -823,18 +653,14 @@ body {
       <div class="form-group">
         <label>Authorized Chat IDs <span style="font-size:10px;color:var(--text-dim)">(one per line)</span></label>
         <textarea id="cfgChatIds" rows="3" placeholder="Enter Chat IDs, one per line&#10;e.g. 123456789"
-          style="width:100%;background:var(--glass);border:1px solid var(--border);border-radius:8px;
-          color:#e0e0e0;padding:9px 12px;font-size:13px;resize:vertical;outline:none;
-          font-family:inherit;box-sizing:border-box;"></textarea>
+          class="cfg-textarea"></textarea>
         <small style="font-size:10px;color:var(--text-dim);">Get your chat ID from @userinfobot on Telegram.</small>
       </div>
-      <button onclick="testTelegramToken()" style="width:100%;background:rgba(6,182,212,.12);border:1px solid var(--cyan);
-        border-radius:8px;padding:8px;color:var(--cyan);font-size:12px;font-weight:700;cursor:pointer;
-        letter-spacing:.5px;margin-top:2px;margin-bottom:4px;">📡 SEND TEST MESSAGE</button>
+      <button onclick="testTelegramToken()" class="ghost-btn accent block">Send test message</button>
     </div>
     <div class="modal-foot">
-      <button class="modal-btn secondary" onclick="closeSettingsModal()">CANCEL</button>
-      <button class="modal-btn primary" onclick="saveSettings()">SAVE &amp; RECONNECT</button>
+      <button class="modal-btn secondary" onclick="closeSettingsModal()">Cancel</button>
+      <button class="modal-btn primary" onclick="saveSettings()">Save &amp; reconnect</button>
     </div>
   </div>
 </div>
@@ -843,7 +669,7 @@ body {
 <div class="modal-overlay" id="schModal">
   <div class="modal-box">
     <div class="modal-head">
-      <h3>⏱ PUMP RUN TIMER</h3>
+      <h3>Pump run timer</h3>
       <button class="modal-close" onclick="closeScheduleModal()">✕</button>
     </div>
     <div class="modal-body">
@@ -946,8 +772,8 @@ body {
       </div>
     </div>
     <div class="modal-foot">
-      <button class="modal-btn secondary" onclick="refreshSchedules()">↻ REFRESH</button>
-      <button class="modal-btn primary" onclick="addAutoSchedule()">＋ ADD SCHEDULE</button>
+      <button class="modal-btn secondary" onclick="refreshSchedules()">Refresh</button>
+      <button class="modal-btn primary" onclick="addAutoSchedule()">Add schedule</button>
     </div>
   </div>
 </div>
@@ -973,7 +799,7 @@ body {
       </div>
     </div>
     <div class="modal-foot">
-      <button class="modal-btn secondary" onclick="closeTgAdminModal()">CANCEL</button>
+      <button class="modal-btn secondary" onclick="closeTgAdminModal()">Cancel</button>
       <button class="modal-btn primary" onclick="addTelegramUser()">AUTHORIZE USER</button>
     </div>
   </div>
@@ -984,15 +810,15 @@ body {
 <script>
 /* ── APPLIANCE DEFINITIONS (9 RELAYS) ── */
 const APPS = [
-  { id: 1, name: "BOREWELL",       desc: "Groundwater Source",   icon: "🌊", isPump: true,  pin: 23 },
-  { id: 2, name: "SUMP PUMP",      desc: "Water Transfer Pump",  icon: "💧", isPump: true,  pin: 19 },
-  { id: 3, name: "GARAGE DOOR",    desc: "Motorized Door Control", icon: "🚗", pin: 18 },
-  { id: 4, name: "SPRINKLER",      desc: "Lawn & Garden",        icon: "🌧", pin: 17 },
-  { id: 5, name: "SWIMMING POOL",  desc: "Pool Pump & Lighting", icon: "🏊", isLight: true, pin: 16 },
-  { id: 6, name: "BALCONY LIGHT",  desc: "Balcony Illumination", icon: "🔆", isLight: true, pin: 4 },
-  { id: 7, name: "OUTSIDE LIGHT",  desc: "Perimeter Safety",     icon: "🏮", isLight: true, pin: 2 },
-  { id: 8, name: "INDOOR LIGHT",   desc: "Main Hall Lighting",   icon: "🛋", isLight: true, pin: 15 },
-  { id: 9, name: "OUTDOOR LIGHT",  desc: "Garden & Patio",       icon: "🌳", isLight: true, pin: 13 }
+  { id: 1, name: "Borewell",       desc: "Groundwater source",   icon: "🌊", isPump: true,  pin: 23 },
+  { id: 2, name: "Sump Pump",      desc: "Water transfer pump",  icon: "💧", isPump: true,  pin: 19 },
+  { id: 3, name: "Garage Door",    desc: "Motorised door control", icon: "🚗", pin: 18 },
+  { id: 4, name: "Sprinkler",      desc: "Lawn &amp; garden",        icon: "🌧", pin: 17 },
+  { id: 5, name: "Swimming Pool",  desc: "Pool pump &amp; lighting", icon: "🏊", isLight: true, pin: 16 },
+  { id: 6, name: "Balcony Light",  desc: "Balcony illumination", icon: "🔆", isLight: true, pin: 4 },
+  { id: 7, name: "Outside Light",  desc: "Perimeter safety",     icon: "🏮", isLight: true, pin: 2 },
+  { id: 8, name: "Indoor Light",   desc: "Main hall lighting",   icon: "🛋", isLight: true, pin: 15 },
+  { id: 9, name: "Outdoor Light",  desc: "Garden &amp; patio",       icon: "🌳", isLight: true, pin: 13 }
 ];
 
 /* ── RUNTIME STATE ── */
@@ -1180,7 +1006,7 @@ async function checkLogin() {
   const btn = document.getElementById("loginSubmit");
   err.style.display = "none";
   btn.disabled = true;
-  btn.textContent = "VERIFYING…";
+  btn.textContent = "Verifying…";
   note.style.color = "var(--text-dim)";
   note.textContent = `🔐 Challenging ${config.prefix} on ${config.broker}…`;
 
@@ -1190,7 +1016,7 @@ async function checkLogin() {
 
   const verdict = hash ? await askDevice(nonce, hash) : { ok: false, reason: "crypto unavailable" };
   btn.disabled = false;
-  btn.textContent = "AUTHENTICATE";
+  btn.textContent = "Sign in";
 
   if (verdict.ok) {
     authMode = "device";
@@ -1199,7 +1025,7 @@ async function checkLogin() {
     return;
   }
   if (verdict.reason === "rejected") {
-    err.textContent = "⛔ Device rejected that security key";
+    err.textContent = "The device rejected that key";
     err.style.display = "block";
     note.textContent = "";
     return;
@@ -1210,11 +1036,11 @@ async function checkLogin() {
   try { local = (await sha256(val)) === DEFAULT_PASS_HASH || val === "OM"; } catch (e) { local = false; }
   if (local) {
     authMode = "local";
-    note.style.color = "#f59e0b";
+    note.style.color = "var(--amber)";
     note.textContent = `⚠ ${verdict.reason} — opened in OFFLINE mode. Controls will queue but not reach the house. Check the topic prefix in Settings after connecting.`;
     unlock();
   } else {
-    err.textContent = "⛔ Access Denied: Invalid Security Key";
+    err.textContent = "Access denied — that key is not recognised";
     err.style.display = "block";
     note.textContent = `${verdict.reason} — and the key is not a known offline key.`;
     setTimeout(() => { err.style.display = "none"; note.textContent = ""; }, 5000);
@@ -1266,11 +1092,11 @@ function buildApplianceGrid() {
         <div class="app-gpio" title="Relay drive pin on the ESP32">GPIO ${a.pin}</div>
       </div>
       <div class="app-card-bottom">
-        <div class="app-state-text" id="appStateLbl${a.id}">${isOn ? "ACTIVE" : "OFF"}</div>
+        <div class="app-state-text" id="appStateLbl${a.id}">${isOn ? "ON" : "OFF"}</div>
         <div class="app-btn-row">
-          <button class="app-sch-btn" title="Schedule ${a.name}">⏰</button>
+          <button class="app-sch-btn" title="Schedule ${a.name}">🕒</button>
           <button class="app-toggle-btn ${isOn ? 'on' : 'off'}" id="appTogBtn${a.id}">
-            ${isOn ? 'TURN OFF' : 'TURN ON'}
+            ${isOn ? 'Turn off' : 'Turn on'}
           </button>
         </div>
       </div>
@@ -1293,10 +1119,10 @@ function updateAppCard(id) {
   const card = document.getElementById("appCard" + id);
   if (!card) return;
   card.className = "app-card" + (isOn ? " is-on" : "");
-  document.getElementById("appStateLbl" + id).textContent = isOn ? "ACTIVE" : "OFF";
+  document.getElementById("appStateLbl" + id).textContent = isOn ? "ON" : "OFF";
   const btn = document.getElementById("appTogBtn" + id);
   btn.className = "app-toggle-btn " + (isOn ? "on" : "off");
-  btn.textContent = isOn ? "TURN OFF" : "TURN ON";
+  btn.textContent = isOn ? "Turn off" : "Turn on";
 }
 
 /* ── APPLIANCE TRIGGER ── */
@@ -1336,7 +1162,7 @@ function updatePumpUI() {
   const mk = document.getElementById("tankSignalMarker");
   mk.className = "float-marker high " + (pct >= 100 ? "wet" : "dry");
   mk.textContent = pct >= 100 ? "FULL" : "SIG";
-  document.getElementById("lblTankSignal").textContent = pct + "% (100% @ GPIO 32)";
+  document.getElementById("lblTankSignal").textContent = pct >= 100 ? "HIGH" : "LOW";
   [[25, "lvlP25"], [50, "lvlP50"], [75, "lvlP75"], [100, "lvlP100"]].forEach(([lv, id]) => {
     document.getElementById(id).className = "lvl-pin" + (pct >= lv ? " wet" : "");
   });
@@ -1346,6 +1172,7 @@ function updatePumpUI() {
   document.getElementById("sumpSignalMarker").className = "float-marker high " + (pumpState.sumpSignalHigh ? "dry" : "wet");
   document.getElementById("lblSumpSignal").textContent = sumpSignal;
   document.getElementById("sumpStatusText").textContent = sumpSignal;
+  document.getElementById("lvlSump25").className = "lvl-pin" + (pumpState.sumpSignalHigh ? "" : " wet");
 
   // Borewell Pump card
   const bBadge = document.getElementById("boreBadge");
