@@ -290,6 +290,9 @@ body {
 .sensor-chips { display: flex; flex-direction: column; gap: 4px; font-size: 11px; }
 .sensor-row { display: flex; align-items: center; justify-content: space-between; color: var(--text-muted); }
 .sensor-row span:last-child { font-weight: 600; }
+.lvl-pins { display: flex; gap: 5px; margin-top: 7px; flex-wrap: wrap; }
+.lvl-pin { font-family: 'Orbitron', monospace; font-size: 9px; padding: 2px 6px; border-radius: 4px; border: 1px solid rgba(148,163,184,.28); color: var(--text-dim); }
+.lvl-pin.wet { color: var(--cyan); border-color: rgba(34,211,238,.5); background: rgba(34,211,238,.12); }
 
 /* ── PUMP CONTROLLERS ── */
 .pumps-grid {
@@ -419,6 +422,8 @@ body {
   letter-spacing: 0.8px; text-transform: uppercase; color: #fff;
 }
 .app-desc { font-size: 10px; color: var(--text-dim); }
+.app-gpio { display: inline-block; margin-top: 5px; font-family: 'Orbitron', monospace; font-size: 9px; letter-spacing: .5px; color: var(--cyan); background: rgba(34,211,238,.10); border: 1px solid rgba(34,211,238,.28); border-radius: 4px; padding: 1px 6px; }
+.pump-gpio { font-family: 'Orbitron', monospace; font-size: 9px; color: var(--cyan); background: rgba(34,211,238,.10); border: 1px solid rgba(34,211,238,.28); border-radius: 4px; padding: 1px 6px; margin-left: 6px; }
 
 .app-card-bottom {
   display: flex; align-items: center; justify-content: space-between; margin-top: auto;
@@ -679,6 +684,13 @@ body {
             <div class="tank-status" id="tankStatusText">HIGH</div>
             <div class="sensor-chips">
               <div class="sensor-row"><span>Water Level Signal (GPIO 32):</span> <span id="lblTankSignal">HIGH</span></div>
+              <div class="sensor-row" style="margin-top:6px;"><span>Level float pins</span> <span style="font-weight:400;color:var(--text-dim)">25%·GPIO 26 · 50%·GPIO 27 · 75%·GPIO 14 · 100%·GPIO 32</span></div>
+              <div class="lvl-pins">
+                <span class="lvl-pin" id="lvlP25">GPIO 26</span>
+                <span class="lvl-pin" id="lvlP50">GPIO 27</span>
+                <span class="lvl-pin" id="lvlP75">GPIO 14</span>
+                <span class="lvl-pin" id="lvlP100">GPIO 32</span>
+              </div>
             </div>
           </div>
         </div>
@@ -693,6 +705,7 @@ body {
             <div class="tank-status" id="sumpStatusText">HIGH</div>
             <div class="sensor-chips">
               <div class="sensor-row"><span>Water Level Signal (GPIO 25):</span> <span id="lblSumpSignal">HIGH</span></div>
+              <div class="sensor-row" style="margin-top:6px;"><span>Sump float pin</span> <span style="font-weight:400;color:var(--text-dim)">GPIO 25 — DRY blocks both pumps</span></div>
             </div>
           </div>
         </div>
@@ -703,7 +716,7 @@ body {
         <!-- Borewell Pump -->
         <div class="pump-card">
           <div class="pump-header">
-            <div class="pump-title"><span>🌊</span> BOREWELL PUMP</div>
+            <div class="pump-title"><span>🌊</span> BOREWELL PUMP<span class="pump-gpio">GPIO 23</span></div>
             <div class="pump-state-badge idle" id="boreBadge">STANDBY</div>
           </div>
           <div class="pump-modes">
@@ -719,7 +732,7 @@ body {
         <!-- Sump Pump -->
         <div class="pump-card">
           <div class="pump-header">
-            <div class="pump-title"><span>💧</span> SUMP WATER PUMP</div>
+            <div class="pump-title"><span>💧</span> SUMP WATER PUMP<span class="pump-gpio">GPIO 19</span></div>
             <div class="pump-state-badge idle" id="sumpBadge">STANDBY</div>
           </div>
           <div class="pump-modes">
@@ -971,15 +984,15 @@ body {
 <script>
 /* ── APPLIANCE DEFINITIONS (9 RELAYS) ── */
 const APPS = [
-  { id: 1, name: "BOREWELL",       desc: "Groundwater Source",   icon: "🌊", isPump: true },
-  { id: 2, name: "SUMP PUMP",      desc: "Water Transfer Pump",  icon: "💧", isPump: true },
-  { id: 3, name: "GARAGE DOOR",    desc: "Motorized Door Control", icon: "🚗" },
-  { id: 4, name: "SPRINKLER",      desc: "Lawn & Garden",        icon: "🌧" },
-  { id: 5, name: "PORCH LIGHT",    desc: "Front Entry Light",    icon: "💡", isLight: true },
-  { id: 6, name: "BALCONY LIGHT",  desc: "Balcony Illumination", icon: "🔆", isLight: true },
-  { id: 7, name: "OUTSIDE LIGHT",  desc: "Perimeter Safety",     icon: "🏮", isLight: true },
-  { id: 8, name: "INDOOR LIGHT",   desc: "Main Hall Lighting",   icon: "🛋", isLight: true },
-  { id: 9, name: "OUTDOOR LIGHT",  desc: "Garden & Patio",       icon: "🌳", isLight: true }
+  { id: 1, name: "BOREWELL",       desc: "Groundwater Source",   icon: "🌊", isPump: true,  pin: 23 },
+  { id: 2, name: "SUMP PUMP",      desc: "Water Transfer Pump",  icon: "💧", isPump: true,  pin: 19 },
+  { id: 3, name: "GARAGE DOOR",    desc: "Motorized Door Control", icon: "🚗", pin: 18 },
+  { id: 4, name: "SPRINKLER",      desc: "Lawn & Garden",        icon: "🌧", pin: 17 },
+  { id: 5, name: "SWIMMING POOL",  desc: "Pool Pump & Lighting", icon: "🏊", isLight: true, pin: 16 },
+  { id: 6, name: "BALCONY LIGHT",  desc: "Balcony Illumination", icon: "🔆", isLight: true, pin: 4 },
+  { id: 7, name: "OUTSIDE LIGHT",  desc: "Perimeter Safety",     icon: "🏮", isLight: true, pin: 2 },
+  { id: 8, name: "INDOOR LIGHT",   desc: "Main Hall Lighting",   icon: "🛋", isLight: true, pin: 15 },
+  { id: 9, name: "OUTDOOR LIGHT",  desc: "Garden & Patio",       icon: "🌳", isLight: true, pin: 13 }
 ];
 
 /* ── RUNTIME STATE ── */
@@ -1250,6 +1263,7 @@ function buildApplianceGrid() {
       <div class="app-info">
         <div class="app-name">${a.name}</div>
         <div class="app-desc">${a.desc}</div>
+        <div class="app-gpio" title="Relay drive pin on the ESP32">GPIO ${a.pin}</div>
       </div>
       <div class="app-card-bottom">
         <div class="app-state-text" id="appStateLbl${a.id}">${isOn ? "ACTIVE" : "OFF"}</div>
@@ -1323,6 +1337,9 @@ function updatePumpUI() {
   mk.className = "float-marker high " + (pct >= 100 ? "wet" : "dry");
   mk.textContent = pct >= 100 ? "FULL" : "SIG";
   document.getElementById("lblTankSignal").textContent = pct + "% (100% @ GPIO 32)";
+  [[25, "lvlP25"], [50, "lvlP50"], [75, "lvlP75"], [100, "lvlP100"]].forEach(([lv, id]) => {
+    document.getElementById(id).className = "lvl-pin" + (pct >= lv ? " wet" : "");
+  });
 
   const sumpSignal = pumpState.sumpSignalHigh ? "HIGH" : "LOW";
   document.getElementById("sumpWaterLevel").style.height = (pumpState.sumpSignalHigh ? 15 : 95) + "%";
