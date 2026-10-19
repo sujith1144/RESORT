@@ -537,11 +537,14 @@ code, kbd { font-family: var(--mono); font-size: 0.92em; background: var(--glass
             <div class="tank-name">Ground Sump</div>
             <div class="tank-status" id="sumpStatusText">HIGH</div>
             <div class="sensor-chips">
-              <div class="sensor-row"><span>Float signal</span> <span id="lblSumpSignal">HIGH</span></div>
-              <div class="lvl-pins" style="margin-top:6px;">
-                <span class="lvl-pin" id="lvlSump25">GPIO 25</span>
+              <div class="sensor-row"><span>100% float</span> <span id="lblSumpSignal">HIGH</span></div>
+              <div class="lvl-pins">
+                <span class="lvl-pin" id="lvlSumpP25">25% · 33</span>
+                <span class="lvl-pin" id="lvlSumpP50">50% · 22</span>
+                <span class="lvl-pin" id="lvlSumpP75">75% · 21</span>
+                <span class="lvl-pin" id="lvlSumpP100">100% · 25</span>
               </div>
-              <div class="lvl-note">DRY blocks both pumps</div>
+              <div class="lvl-note">Float GPIOs · lit = water at that level · DRY blocks both pumps</div>
             </div>
           </div>
         </div>
@@ -827,7 +830,8 @@ const APPS = [
 let relayStates = Array(9).fill(false);
 let pumpState = {
   tankSignalHigh: true, sumpSignalHigh: true,
-  tankLevelPct: 0, boreTimerLeftS: 0, sumpTimerLeftS: 0,
+  tankLevelPct: 0, sumpLevelPct: 0, boreTimerLeftS: 0, sumpTimerLeftS: 0,
+  sumpL25Wet: false, sumpL50Wet: false, sumpL75Wet: false, sumpL100Wet: false,
   boreOn: false, sumpOn: false, boreMode: "auto", sumpMode: "auto",
   boreRunS: 0, sumpRunS: 0, minOnBoreS: 45, maxRunBoreS: 3600,
   minOnSumpS: 30, maxRunSumpS: 2400
@@ -1169,12 +1173,19 @@ function updatePumpUI() {
     document.getElementById(id).className = "lvl-pin" + (pct >= lv ? " wet" : "");
   });
 
-  const sumpSignal = pumpState.sumpSignalHigh ? "HIGH" : "LOW";
-  document.getElementById("sumpWaterLevel").style.height = (pumpState.sumpSignalHigh ? 15 : 95) + "%";
-  document.getElementById("sumpSignalMarker").className = "float-marker high " + (pumpState.sumpSignalHigh ? "dry" : "wet");
-  document.getElementById("lblSumpSignal").textContent = sumpSignal;
-  document.getElementById("sumpStatusText").textContent = sumpSignal;
-  document.getElementById("lvlSump25").className = "lvl-pin" + (pumpState.sumpSignalHigh ? "" : " wet");
+  const sumpPct = Math.max(0, Math.min(100, parseInt(pumpState.sumpLevelPct) || 0));
+  document.getElementById("sumpWaterLevel").style.height = Math.max(sumpPct, sumpPct > 0 ? 8 : 2) + "%";
+  document.getElementById("sumpStatusText").textContent = sumpPct + "%";
+  document.getElementById("sumpStatusText").className = "tank-status" + (sumpPct <= 25 ? " low" : "");
+  const sMark = document.getElementById("sumpSignalMarker");
+  sMark.className = "float-marker high " + (sumpPct >= 100 ? "wet" : "dry");
+  sMark.textContent = sumpPct >= 100 ? "FULL" : "SIG";
+  document.getElementById("lblSumpSignal").textContent = sumpPct >= 100 ? "HIGH" : "LOW";
+  [[25, "lvlSumpP25", "sumpL25Wet"], [50, "lvlSumpP50", "sumpL50Wet"],
+   [75, "lvlSumpP75", "sumpL75Wet"], [100, "lvlSumpP100", "sumpL100Wet"]].forEach(([lv, id, flag]) => {
+    const lit = pumpState[flag] === undefined ? sumpPct >= lv : !!pumpState[flag];
+    document.getElementById(id).className = "lvl-pin" + (lit ? " wet" : "");
+  });
 
   // Borewell Pump card
   const bBadge = document.getElementById("boreBadge");
